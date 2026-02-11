@@ -1,0 +1,2370 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bowling Smart Tracker</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:rgba(226,232,240,.9);
+
+      --accent1:#2563eb;
+      --accent2:#7c3aed;
+      --good:#22c55e;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+
+      --shadow: 0 14px 40px rgba(2,6,23,.10);
+      --shadow2: 0 8px 18px rgba(2,6,23,.08);
+      --radius:20px;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:16px;
+      padding-bottom:90px; /* room for sticky bar */
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      color:var(--text);
+
+      background:
+        radial-gradient(900px 520px at 15% -10%, rgba(37,99,235,.18), transparent 55%),
+        radial-gradient(900px 520px at 85% -10%, rgba(124,58,237,.16), transparent 55%),
+        radial-gradient(700px 460px at 50% 110%, rgba(34,197,94,.10), transparent 55%),
+        linear-gradient(180deg, #f8fafc, #f1f5f9 55%, #eef2ff);
+      background-attachment: fixed;
+    }
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      opacity:.20;
+      background:
+        radial-gradient(circle at 1px 1px, rgba(15,23,42,.25) 1px, transparent 0) 0 0/18px 18px;
+      mix-blend-mode: overlay;
+    }
+
+    .appHeader{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:12px; position:relative; }
+    h1{ font-size:18px; margin:0; letter-spacing:.2px; }
+    .sub{ font-size:12px; color:var(--muted); margin-top:6px; line-height:1.35; max-width:85ch; }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,1), rgba(248,250,252,.95));
+      border:1px solid rgba(226,232,240,.85);
+      border-radius:var(--radius);
+      padding:14px;
+      box-shadow:var(--shadow);
+      margin:12px 0;
+      position:relative;
+      overflow:hidden;
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background: linear-gradient(135deg, rgba(37,99,235,.18), rgba(124,58,237,.18), transparent 60%);
+      filter: blur(18px);
+      opacity:.65;
+      pointer-events:none;
+    }
+    .card > *{ position:relative; }
+
+    .nav{ display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; position:relative; }
+    .pill{
+      padding:10px 12px; font-size:14px;
+      border-radius:999px; border:1px solid var(--border);
+      background:rgba(255,255,255,.92); color:var(--text);
+      box-shadow: 0 1px 0 rgba(2,6,23,.04);
+      touch-action: manipulation;
+      transition: transform .08s ease, box-shadow .16s ease, border-color .16s ease, filter .16s ease;
+      backdrop-filter: blur(8px);
+    }
+    .pill:active{ transform: translateY(1px) scale(.99); }
+    .pill.on{
+      border-color: rgba(37,99,235,.45);
+      background: linear-gradient(135deg, rgba(37,99,235,.16), rgba(124,58,237,.12));
+      box-shadow: 0 18px 34px rgba(37,99,235,.18);
+      position:relative;
+    }
+    .pill.on::after{
+      content:'';
+      position:absolute; inset:-1px;
+      border-radius:999px;
+      border:1px solid rgba(124,58,237,.25);
+      pointer-events:none;
+    }
+
+    .row{ display:grid; grid-template-columns: repeat(2,1fr); gap:10px; margin-top:10px; }
+    .row3{ display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top:10px; }
+    .row4{ display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-top:10px; }
+
+    button{
+      padding:14px 12px;
+      font-size:16px;
+      border-radius:16px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.95);
+      color:var(--text);
+      box-shadow: var(--shadow2);
+      touch-action: manipulation;
+      transition: transform .08s ease, box-shadow .16s ease, border-color .16s ease, filter .16s ease;
+      backdrop-filter: blur(8px);
+    }
+    button:hover{ filter: brightness(1.02); }
+    button:active{ transform: translateY(1px) scale(.99); box-shadow: 0 6px 14px rgba(2,6,23,.10); }
+    button.secondary{ color:var(--muted); }
+    button.disabled{ opacity:.45; box-shadow:none; }
+    button.primary{
+      border-color: rgba(37,99,235,.35);
+      color:#0b1220;
+      background: linear-gradient(135deg, rgba(37,99,235,.18), rgba(124,58,237,.14));
+      box-shadow: 0 16px 32px rgba(37,99,235,.16);
+    }
+
+    .section-title{ font-size:12px; color:var(--muted); margin-top:2px; letter-spacing:.2px; }
+    .divider{ height:1px; background:rgba(226,232,240,.9); margin:12px 0; }
+
+    .summary{
+      display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+      padding:10px; border:1px solid var(--border);
+      border-radius:16px; background:rgba(248,250,252,.85);
+      margin-top:10px;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border:1px solid rgba(37,99,235,.18);
+      border-radius:999px;
+      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(248,250,252,.9));
+      font-size:13px;
+      box-shadow: 0 1px 0 rgba(2,6,23,.03);
+    }
+    .chip b{ font-weight:800; }
+
+    .smallbtn{
+      padding:8px 10px; font-size:13px;
+      border-radius:999px; border:1px solid var(--border);
+      background:#fff; color:var(--muted);
+      box-shadow: 0 8px 18px rgba(2,6,23,.06);
+    }
+
+    .coach{
+      display:flex; gap:10px; align-items:flex-start; justify-content:space-between;
+      padding:10px;
+      border:1px solid rgba(226,232,240,.95);
+      border-radius:16px;
+      background: linear-gradient(180deg, rgba(248,250,252,.95), rgba(241,245,249,.85));
+      margin-top:10px;
+    }
+    .coach .msg{ font-size:13px; line-height:1.35; }
+    .badgeRow{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .badge{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid var(--border); background:#fff;
+      font-size:12px; color:var(--muted);
+      box-shadow: 0 1px 0 rgba(2,6,23,.03);
+    }
+    .badge strong{ color:var(--text); }
+    .hint{ font-size:12px; color:var(--muted); margin-top:8px; }
+
+    .pinpad{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:10px; align-items:center; justify-items:center;
+    }
+    .pinbtn{
+      width:100%;
+      padding:12px 0; border-radius:16px;
+      border:1px solid var(--border); background:#fff;
+      font-size:16px;
+      box-shadow: var(--shadow2);
+      transition: transform .08s ease, box-shadow .16s ease, border-color .16s ease;
+    }
+    .pinbtn:active{ transform: translateY(1px) scale(.99); }
+    .pinbtn.on{
+      border-color: rgba(124,58,237,.40);
+      box-shadow: 0 18px 34px rgba(124,58,237,.14);
+      position:relative;
+    }
+    .pinbtn.on::after{
+      content:''; position:absolute; inset:-1px;
+      border-radius:16px; border:1px solid rgba(124,58,237,.35);
+      pointer-events:none;
+    }
+    .p1 { grid-column: 2 / span 2; }
+    .p2 { grid-column: 2 / span 1; }
+    .p3 { grid-column: 3 / span 1; }
+    .p4 { grid-column: 1 / span 1; }
+    .p5 { grid-column: 2 / span 1; }
+    .p6 { grid-column: 3 / span 1; }
+    .p7 { grid-column: 1 / span 1; }
+    .p8 { grid-column: 2 / span 1; }
+    .p9 { grid-column: 3 / span 1; }
+    .p10{ grid-column: 4 / span 1; }
+
+    select, input[type="text"]{
+      width:100%;
+      padding:12px 12px;
+      font-size:15px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      margin-top:10px;
+      background:#fff; color:var(--text);
+      box-shadow: 0 1px 0 rgba(2,6,23,.03);
+    }
+    .log{ white-space:pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; user-select:all; color:#0f172a; }
+
+    .progressWrap{ margin-top:10px; }
+    .progressTrack{
+      height:10px; border-radius:999px; background:rgba(226,232,240,.9);
+      overflow:hidden; border:1px solid rgba(226,232,240,.9);
+    }
+    .progressFill{
+      height:100%; width:0%;
+      background: linear-gradient(90deg, rgba(37,99,235,.85), rgba(124,58,237,.85), rgba(37,99,235,.85));
+      background-size: 200% 100%;
+      animation: shimmer 1.6s linear infinite;
+      transition: width .2s ease;
+    }
+    @keyframes shimmer{
+      0%{ background-position: 0% 0; }
+      100%{ background-position: 200% 0; }
+    }
+
+    .frameStrip{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap:8px;
+    }
+    .fbox{
+      border:1px solid var(--border);
+      background:#fff; border-radius:14px;
+      padding:10px 0 22px; /* extra room for cumulative score */
+      text-align:center;
+      box-shadow: 0 1px 0 rgba(2,6,23,.03);
+      font-size:14px; color:var(--muted);
+      user-select:none; position:relative;
+      min-height:56px;
+    }
+    .fbox .n{ font-size:11px; color:var(--muted); display:block; line-height:1; margin-bottom:6px; }
+    .fbox .m{ font-size:16px; color:var(--text); font-weight:800; letter-spacing:.2px; }
+    .fbox .cs{
+      position:absolute;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:6px;
+      font-size:11px;
+      font-weight:700;
+      color:rgba(100,116,139,.95);
+    }
+    .fbox .qdot{
+      position:absolute; left:50%; transform:translateX(-50%);
+      bottom:22px; width:8px; height:8px; border-radius:999px;
+      border:1px solid rgba(15,23,42,.10);
+      background: rgba(148,163,184,.55);
+    }
+    .qdot.flush{ background: rgba(34,197,94,.85); }
+    .qdot.light{ background: rgba(234,179,8,.85); }
+    .qdot.high{ background: rgba(249,115,22,.85); }
+    .qdot.bad{ background: rgba(239,68,68,.85); }
+    .fbox.cur{ border-color: rgba(37,99,235,.35); box-shadow: 0 10px 24px rgba(37,99,235,.14); }
+    .fbox.done{ border-color: rgba(124,58,237,.30); }
+    .fbox.open .m{ color:#b45309; }
+    .fbox.spare .m{ color:#2563eb; }
+    .fbox.strike .m{ color:#16a34a; }
+
+    .sessionBar{
+      margin-top:10px;
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:rgba(248,250,252,.85);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .sessionRow{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .sessionRow .label{ font-size:12px; color:var(--muted); margin-right:4px; }
+
+    .hudTop{ display:flex; flex-direction:column; gap:10px; }
+    .hudRow{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+    .hudLeft{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .warn{
+      display:none;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(245,158,11,.35);
+      background: rgba(255,251,235,.95);
+      box-shadow: 0 10px 24px rgba(245,158,11,.10);
+      font-size:12px;
+      color:#92400e;
+      gap:8px;
+      align-items:center;
+    }
+    .lockBar{
+      display:none;
+      padding:10px 12px;
+      border-radius:16px;
+      border:1px solid rgba(37,99,235,.25);
+      background: rgba(239,246,255,.95);
+      color:#1e3a8a;
+      font-size:12px;
+    }
+    .bars{
+      display:none;
+      margin-top:8px;
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:#fff;
+    }
+    .barRow{ display:grid; grid-template-columns: 50px 1fr 40px; gap:10px; align-items:center; margin:6px 0; }
+    .barTrack{ height:10px; border-radius:999px; background: rgba(226,232,240,.9); overflow:hidden; border:1px solid rgba(226,232,240,.9); }
+    .barFill{ height:100%; width:0%; background: rgba(37,99,235,.75); }
+    .barRow.muted .barFill{ background: rgba(100,116,139,.45); }
+    .barRow .pct{ font-size:12px; color:var(--muted); text-align:right; }
+
+    .laneWrap{
+      border:1px solid rgba(226,232,240,.95);
+      border-radius:18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(241,245,249,.85));
+      overflow:hidden;
+      box-shadow: 0 18px 40px rgba(2,6,23,.08);
+    }
+    svg{ display:block; width:100%; height:auto; }
+
+    /* Step pulse glow */
+    .stepPulse{ position:relative; }
+    .stepPulse::after{
+      content:"";
+      position:absolute;
+      inset:-6px;
+      border-radius:22px;
+      background: radial-gradient(closest-side, rgba(37,99,235,.18), transparent 70%);
+      filter: blur(10px);
+      opacity:.85;
+      pointer-events:none;
+      animation: pulseGlow 1.4s ease-in-out infinite;
+    }
+    @keyframes pulseGlow{
+      0%,100%{ transform: scale(.98); opacity:.55; }
+      50%{ transform: scale(1.02); opacity:.95; }
+    }
+
+    /* Sticky bar */
+    .stickyBar{
+      position:fixed;
+      left:16px; right:16px; bottom:14px;
+      z-index:50;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      padding:12px 12px;
+      border-radius:18px;
+      border:1px solid rgba(226,232,240,.85);
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 18px 48px rgba(2,6,23,.14);
+    }
+    .stickyLeft{ display:flex; flex-direction:column; gap:2px; }
+    .stickyTitle{ font-weight:900; letter-spacing:.2px; }
+    .stickySub{ font-size:12px; color:var(--muted); }
+    .stickyRight{ display:flex; gap:8px; align-items:center; }
+  </style>
+</head>
+<body>
+  <div class="appHeader">
+    <div>
+      <h1>Bowling Smart Tracker</h1>
+      <div class="sub">
+        Always-on lane HUD (realistic boards/arrows/pocket). Carry quality is required on every Ball 1. Miss Predictor appears when it’s confident.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hudTop">
+      <div class="hudRow">
+        <div class="hudLeft">
+          <span class="chip"><b>Game:</b> <span id="hudGame">1</span></span>
+          <span class="chip"><b>Frame:</b> <span id="hudFrame">1</span></span>
+          <span class="chip"><b>Condition:</b> <span id="hudCond">Unknown</span></span>
+          <span class="chip"><b>Max score:</b> <span id="hudMax">300</span></span>
+        </div>
+        <div class="hudLeft">
+          <div id="warnPill" class="warn" onclick="dismissWarn()" title="Tap to dismiss">
+            <b>⚠ Likely miss:</b> <span id="warnText">High</span> <span id="warnPct">(68%)</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="lockBanner" class="lockBar"></div>
+
+      <div class="laneWrap">
+        <svg id="laneSvg" viewBox="0 0 360 220" aria-label="Lane shot path"></svg>
+      </div>
+
+      <div id="confBars" class="bars"></div>
+      <div class="hint" id="hudHint" style="margin:0;">
+        Solid line = current frame plan/log. Faded line = last shot. Colors follow carry quality (green flush, yellow light, orange high, red bad/open).
+      </div>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button class="pill" id="tabLog" onclick="setView('log')">Log</button>
+    <button class="pill" id="tabPractice" onclick="setView('practice')">Practice</button>
+    <button class="pill" id="tabDash" onclick="setView('dash')">Dashboard</button>
+    <button class="pill" id="tabSettings" onclick="setView('settings')">Settings</button>
+  </div>
+
+  <div class="card" id="viewLog">
+    <div class="section-title">Frame</div>
+    <div class="row3">
+      <button type="button" id="prev">◀</button>
+      <button type="button" id="frame" class="secondary">Game 1 · Frame 1</button>
+      <button type="button" id="next">▶</button>
+    </div>
+
+    <div class="progressWrap">
+      <div class="progressTrack"><div class="progressFill" id="progressFill"></div></div>
+    </div>
+
+    <div class="frameStrip" id="frameStrip"></div>
+
+    <div class="sessionBar" id="sessionBar">
+      <div class="sessionRow">
+        <span class="label">Lane condition (this game):</span>
+        <button type="button" class="pill" id="condFresh" onclick="setLaneCondition('Fresh')">Fresh</button>
+        <button type="button" class="pill" id="condTransition" onclick="setLaneCondition('Transition')">Transition</button>
+        <button type="button" class="pill" id="condBurn" onclick="setLaneCondition('Burn')">Burn</button>
+        <button type="button" class="pill" id="condUnknown" onclick="setLaneCondition('Unknown')">Unknown</button>
+      </div>
+      <div class="hint" style="margin:0;">
+        Fresh = line/target first. Burn = speed/hand first. Transition = small moves. Defaults to Unknown.
+      </div>
+    </div>
+
+    <div id="coachCard" class="coach" style="display:none;">
+      <div class="msg" style="flex:1;">
+        <b>Coach:</b> <span id="coachText"></span>
+        <div class="badgeRow" id="coachBadges" style="display:none;"></div>
+        <div class="hint" id="coachWhy" style="margin-top:8px; display:none;"></div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px; min-width:120px;">
+        <button type="button" class="smallbtn" onclick="coachFeedback(true)">Helpful</button>
+        <button type="button" class="smallbtn" onclick="coachFeedback(false)">Not helpful</button>
+        <button type="button" class="smallbtn" onclick="dismissCoach()">Close</button>
+      </div>
+    </div>
+
+    <div id="summaryBar" class="summary" style="display:none;"></div>
+
+    <div id="s_b1_result">
+      <div class="divider"></div>
+      <div class="section-title">Ball 1</div>
+      <div class="row">
+        <button type="button" class="primary" onclick="b1Strike()">Strike</button>
+        <button type="button" onclick="b1Open()">Not a strike</button>
+      </div>
+      <div class="hint">If it’s not a strike, you’ll select the leave pins.</div>
+    </div>
+
+    <div id="s_b1_leave" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Ball 1 leave (pins standing)</div>
+
+      <div class="section-title" style="margin-top:10px;">Common leaves (1 tap)</div>
+      <div class="nav" id="b1Common" style="margin:10px 0 0;"></div>
+
+      <div class="section-title" style="margin-top:10px;">Tap the pins that are standing</div>
+      <div class="pinpad" id="b1Pins"></div>
+
+      <div class="row">
+        <button type="button" id="b1Next" class="disabled primary" onclick="finishB1Leave()">Next</button>
+        <button type="button" class="secondary" onclick="clearB1Leave()">Clear</button>
+      </div>
+      <div class="hint">Next unlocks once you select at least one pin.</div>
+    </div>
+
+    <div id="s_b1_quality" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Ball 1 quality</div>
+      <div class="row">
+        <button type="button" class="primary" onclick="setQuality('b1','Good')">Good</button>
+        <button type="button" onclick="setQuality('b1','Bad')">Bad</button>
+      </div>
+      <div class="hint">Bad requires a label.</div>
+    </div>
+
+    <div id="s_b1_label" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Ball 1 label (required)</div>
+      <div class="row">
+        <button type="button" onclick="setCause('b1','Speed')">Speed</button>
+        <button type="button" onclick="setCause('b1','Release')">Release</button>
+      </div>
+
+      <div id="b1_speed" style="display:none;">
+        <div class="section-title" style="margin-top:10px;">Speed preset</div>
+        <div class="row">
+          <button type="button" onclick="presetSpeed('b1','Fast','Muscled')">Rushed / Yanked</button>
+          <button type="button" onclick="presetSpeed('b1','Slow','Muscled')">Steered</button>
+        </div>
+        <div class="row">
+          <button type="button" onclick="presetSpeed('b1','Slow','NotMuscled')">Guided</button>
+          <button type="button" onclick="presetSpeed('b1','Fast','NotMuscled')">Feet quick</button>
+        </div>
+
+        <div class="section-title" style="margin-top:10px;">Tempo</div>
+        <div class="row">
+          <button type="button" onclick="setTempo('b1','Fast')">Fast</button>
+          <button type="button" onclick="setTempo('b1','Slow')">Slow</button>
+        </div>
+
+        <div class="section-title" style="margin-top:10px;">Effort</div>
+        <div class="row">
+          <button type="button" onclick="setEffort('b1','Muscled')">Muscled</button>
+          <button type="button" onclick="setEffort('b1','NotMuscled')">Didn’t muscle</button>
+        </div>
+      </div>
+
+      <div id="b1_release" style="display:none;">
+        <div class="section-title" style="margin-top:10px;">Release type</div>
+        <div class="row">
+          <button type="button" onclick="setRelease('b1','Grabbed')">Grabbed</button>
+          <button type="button" onclick="setRelease('b1','Dropped')">Dropped</button>
+        </div>
+        <div class="row">
+          <button type="button" onclick="setRelease('b1','Around')">Around</button>
+          <button type="button" onclick="setRelease('b1','Lofted')">Lofted</button>
+        </div>
+      </div>
+
+      <div class="hint">Auto-advances as soon as your label is complete.</div>
+    </div>
+
+    <div id="s_b1_arrows" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Ball 1 — Arrow board</div>
+      <div class="row4">
+        <button type="button" onclick="setArrows('b1',5)">5</button>
+        <button type="button" class="primary" onclick="setArrows('b1',10)">10</button>
+        <button type="button" onclick="setArrows('b1',15)">15</button>
+        <button type="button" onclick="setArrows('b1',20)">20</button>
+      </div>
+      <div class="row3">
+        <button type="button" onclick="setArrows('b1',25)">25</button>
+        <button type="button" onclick="setArrows('b1',30)">30</button>
+        <button type="button" onclick="setArrows('b1',35)">35</button>
+      </div>
+      <div class="row">
+        <button type="button" onclick="setArrowsOther('b1')">Other…</button>
+        <button type="button" class="secondary" onclick="setArrows('b1','Unknown')">Unknown</button>
+      </div>
+      <div class="hint">Defaults: strikes=10; 10-pin=30; 7-pin=20. Use Other if needed.</div>
+    </div>
+
+    <div id="s_carry" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Carry quality (Ball 1) — required</div>
+      <div class="row">
+        <button type="button" class="primary" onclick="setCarry('Flush')">🎯 Flush</button>
+        <button type="button" onclick="setCarry('Light')">🔄 Light</button>
+      </div>
+      <div class="row">
+        <button type="button" onclick="setCarry('High')">⚠ High</button>
+        <button type="button" onclick="setCarry('Lucky')">⚠ Lucky</button>
+      </div>
+      <div class="row">
+        <button type="button" onclick="setCarry('Flat10')">Flat 10</button>
+        <button type="button" onclick="setCarry('Ring10')">Ring 10</button>
+      </div>
+      <div class="row">
+        <button type="button" onclick="setCarry('Weak7')">Weak 7</button>
+        <button type="button" class="secondary" onclick="setCarry('Other')">Other</button>
+      </div>
+      <div class="hint">This is how the app separates “good strikes” from “lucky strikes.”</div>
+    </div>
+
+    <div id="s_hook" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Hook timing (Ball 1)</div>
+      <div class="row">
+        <button type="button" onclick="setHook('Early')">Early</button>
+        <button type="button" class="primary" onclick="setHook('OnTime')">On time</button>
+      </div>
+      <div class="row">
+        <button type="button" onclick="setHook('Late')">Late</button>
+        <button type="button" class="secondary" onclick="setHook('Never')">Never hooked</button>
+      </div>
+      <div class="row">
+        <button type="button" class="secondary" onclick="setHook('Unknown')">Not sure</button>
+        <button type="button" class="secondary" onclick="setHook('N/A')">N/A</button>
+      </div>
+    </div>
+
+    <div id="s_b2_result" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Ball 2</div>
+      <div class="row">
+        <button type="button" class="primary" onclick="b2Spare()">Spare</button>
+        <button type="button" onclick="b2Miss()">Missed spare</button>
+      </div>
+    </div>
+
+    <div id="s_b2_missdir" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Miss direction (Ball 2)</div>
+      <div class="row">
+        <button type="button" onclick="setSpareMissDir('Left')">Missed left</button>
+        <button type="button" onclick="setSpareMissDir('Right')">Missed right</button>
+      </div>
+      <div class="row">
+        <button type="button" class="secondary" onclick="setSpareMissDir('Unknown')">Not sure</button>
+        <button type="button" class="secondary" onclick="setSpareMissDir('None')">Skip</button>
+      </div>
+    </div>
+
+    <div id="s_b2_leave" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Leave after Ball 2 (pins standing)</div>
+
+      <div class="section-title" style="margin-top:10px;">Common leaves (1 tap)</div>
+      <div class="nav" id="b2Common" style="margin:10px 0 0;"></div>
+
+      <div class="section-title" style="margin-top:10px;">Tap the pins that are standing</div>
+      <div class="pinpad" id="b2Pins"></div>
+
+      <div class="row">
+        <button type="button" id="b2Next" class="disabled primary" onclick="finishB2Leave()">Next</button>
+        <button type="button" class="secondary" onclick="clearB2Leave()">Clear</button>
+      </div>
+    </div>
+
+    <div id="s_b2_quality" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Ball 2 quality</div>
+      <div class="row">
+        <button type="button" class="primary" onclick="setQuality('b2','Good')">Good</button>
+        <button type="button" onclick="setQuality('b2','Bad')">Bad</button>
+      </div>
+      <div class="hint">Bad requires a label.</div>
+    </div>
+
+    <div id="s_b2_label" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Ball 2 label (required)</div>
+      <div class="row">
+        <button type="button" onclick="setCause('b2','Speed')">Speed</button>
+        <button type="button" onclick="setCause('b2','Release')">Release</button>
+      </div>
+
+      <div id="b2_speed" style="display:none;">
+        <div class="section-title" style="margin-top:10px;">Speed preset</div>
+        <div class="row">
+          <button type="button" onclick="presetSpeed('b2','Fast','Muscled')">Rushed / Yanked</button>
+          <button type="button" onclick="presetSpeed('b2','Slow','Muscled')">Steered</button>
+        </div>
+        <div class="row">
+          <button type="button" onclick="presetSpeed('b2','Slow','NotMuscled')">Guided</button>
+          <button type="button" onclick="presetSpeed('b2','Fast','NotMuscled')">Feet quick</button>
+        </div>
+
+        <div class="section-title" style="margin-top:10px;">Tempo</div>
+        <div class="row">
+          <button type="button" onclick="setTempo('b2','Fast')">Fast</button>
+          <button type="button" onclick="setTempo('b2','Slow')">Slow</button>
+        </div>
+
+        <div class="section-title" style="margin-top:10px;">Effort</div>
+        <div class="row">
+          <button type="button" onclick="setEffort('b2','Muscled')">Muscled</button>
+          <button type="button" onclick="setEffort('b2','NotMuscled')">Didn’t muscle</button>
+        </div>
+      </div>
+
+      <div id="b2_release" style="display:none;">
+        <div class="section-title" style="margin-top:10px;">Release type</div>
+        <div class="row">
+          <button type="button" onclick="setRelease('b2','Grabbed')">Grabbed</button>
+          <button type="button" onclick="setRelease('b2','Dropped')">Dropped</button>
+        </div>
+        <div class="row">
+          <button type="button" onclick="setRelease('b2','Around')">Around</button>
+          <button type="button" onclick="setRelease('b2','Lofted')">Lofted</button>
+        </div>
+      </div>
+
+      <div class="hint">Auto-advances as soon as your label is complete.</div>
+    </div>
+
+    <div id="s_b2_arrows" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Ball 2 — Arrow board</div>
+      <div class="row4">
+        <button type="button" onclick="setArrows('b2',5)">5</button>
+        <button type="button" onclick="setArrows('b2',10)">10</button>
+        <button type="button" onclick="setArrows('b2',15)">15</button>
+        <button type="button" onclick="setArrows('b2',20)">20</button>
+      </div>
+      <div class="row3">
+        <button type="button" onclick="setArrows('b2',25)">25</button>
+        <button type="button" onclick="setArrows('b2',30)">30</button>
+        <button type="button" onclick="setArrows('b2',35)">35</button>
+      </div>
+      <div class="row">
+        <button type="button" onclick="setArrowsOther('b2')">Other…</button>
+        <button type="button" class="secondary" onclick="setArrows('b2','Unknown')">Unknown</button>
+      </div>
+    </div>
+
+    <div id="s_tags" style="display:none;">
+      <div class="divider"></div>
+      <div class="section-title">Optional tags</div>
+      <div class="nav" style="margin:10px 0 0;">
+        <button type="button" id="tagLeft" class="pill" onclick="toggleTag('Left')">Left</button>
+        <button type="button" id="tagRight" class="pill" onclick="toggleTag('Right')">Right</button>
+        <button type="button" id="tagHigh" class="pill" onclick="toggleTag('High')">High</button>
+        <button type="button" id="tagLight" class="pill" onclick="toggleTag('Light')">Light</button>
+      </div>
+      <div class="row">
+        <button type="button" class="primary" onclick="finishTags()">Done</button>
+        <button type="button" class="secondary" onclick="skipTags()">Skip</button>
+      </div>
+    </div>
+
+    <div id="s_save" style="display:none;">
+      <div class="divider"></div>
+      <div class="row">
+        <button type="button" class="primary" onclick="saveFrame()">Save frame</button>
+        <button type="button" class="secondary" onclick="resetFrame()">Reset frame</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="viewPractice" style="display:none;">
+    <div class="section-title">Practice goal</div>
+    <select id="practiceGoal">
+      <option value="10pin">10-pin spares</option>
+      <option value="7pin">7-pin spares</option>
+      <option value="pocket">Pocket hits</option>
+      <option value="speed">Speed control</option>
+    </select>
+
+    <div id="practicePanel" style="margin-top:10px;"></div>
+    <div class="summary" id="practiceSummary" style="display:none;"></div>
+
+    <div class="row" style="margin-top:10px;">
+      <button type="button" onclick="practiceReset()">Reset practice</button>
+      <button type="button" class="secondary" onclick="practiceExport()">Export practice JSON</button>
+    </div>
+  </div>
+
+  <div class="card" id="viewDash" style="display:none;">
+    <div class="section-title">Dashboard</div>
+    <div id="dashText" class="log"></div>
+  </div>
+
+  <div class="card" id="viewSettings" style="display:none;">
+    <div class="section-title">Spare system</div>
+    <select id="spareSystem" onchange="saveSettings()">
+      <option value="3-6-9">3-6-9 (move feet / same target)</option>
+      <option value="cross">Cross-lane straight at pin</option>
+      <option value="arrows">Arrows-based</option>
+      <option value="other">Other</option>
+    </select>
+    <input id="spareOther" type="text" placeholder="If Other, describe your spare method" oninput="saveSettings()" />
+
+    <div class="section-title" style="margin-top:14px;">Backup</div>
+    <div class="row">
+      <button type="button" onclick="exportAll()">Export all</button>
+      <button type="button" class="secondary" onclick="triggerImport()">Import JSON</button>
+    </div>
+    <input id="importFile" type="file" accept="application/json" style="display:none;" />
+
+    <div class="row" style="margin-top:10px;">
+      <button type="button" class="secondary" onclick="clearAll()">Clear all data</button>
+      <button type="button" class="secondary" onclick="resetCoachMemory()">Reset coach memory</button>
+    </div>
+
+    <div class="hint">Everything stays on this phone (localStorage) unless you export.</div>
+  </div>
+
+  <!-- Sticky bottom bar -->
+  <div id="stickyBar" class="stickyBar">
+    <div class="stickyLeft">
+      <div class="stickyTitle" id="stickyTitle">Next: Ball 1</div>
+      <div class="stickySub" id="stickySub">Complete this step to unlock the next.</div>
+    </div>
+    <div class="stickyRight">
+      <button type="button" class="smallbtn" onclick="undoLast()">Undo</button>
+      <button type="button" class="primary" onclick="jumpToActive()">Go</button>
+    </div>
+  </div>
+
+<script>
+/* =========================
+   STORAGE + STATE
+========================= */
+const STORAGE_KEY = 'bowling_smart_tracker_v9_pop';
+const DEFAULT_SETTINGS = { spareSystem:'3-6-9', spareOther:'' };
+const DEFAULT_COACHMEM = { lastAdviceKey:null, repeatCount:0, focusType:null, focusRemaining:0, lastFocus:null, lastFeatures:null };
+const DEFAULT_MODEL = { weights: { Feet:0, Eyes:0, Speed:0, Hand:0 } };
+const DEFAULT_STATS = { contexts: {} };
+
+const state = {
+  view: 'log',
+  game: 1,
+  frame: 1,
+  settings: DEFAULT_SETTINGS,
+  coachMem: DEFAULT_COACHMEM,
+  model: DEFAULT_MODEL,
+  stats: DEFAULT_STATS,
+  frames: [],
+  practice: [],
+  gameMeta: {},
+  current: null,
+  warnDismissed: false
+};
+
+function loadAll(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  try{
+    const obj = JSON.parse(raw);
+    state.settings = obj.settings || DEFAULT_SETTINGS;
+    state.coachMem = obj.coachMem ? { ...DEFAULT_COACHMEM, ...obj.coachMem } : { ...DEFAULT_COACHMEM };
+    state.model = obj.model ? { ...DEFAULT_MODEL, ...obj.model, weights: { ...DEFAULT_MODEL.weights, ...(obj.model.weights||{}) } } : { ...DEFAULT_MODEL };
+    state.stats = obj.stats ? { ...DEFAULT_STATS, ...obj.stats, contexts: obj.stats.contexts || {} } : { ...DEFAULT_STATS };
+    state.frames = obj.frames || [];
+    state.practice = obj.practice || [];
+    state.gameMeta = obj.gameMeta || {};
+    state.game = obj.game || 1;
+    state.frame = obj.frame || 1;
+    state.view = obj.view || 'log';
+  }catch(e){}
+}
+function saveAll(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    settings: state.settings,
+    coachMem: state.coachMem,
+    model: state.model,
+    stats: state.stats,
+    frames: state.frames,
+    practice: state.practice,
+    gameMeta: state.gameMeta,
+    game: state.game,
+    frame: state.frame,
+    view: state.view
+  }));
+}
+loadAll();
+
+/* =========================
+   HELPERS
+========================= */
+function el(id){ return document.getElementById(id); }
+function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+function pinsToStr(set){
+  const arr = Array.from(set).sort((a,b)=>a-b);
+  return arr.length ? arr.join('-') : null;
+}
+function setFromPinsStr(str){
+  const set = new Set();
+  if (!str) return set;
+  str.split('-').forEach(x=>{
+    const n = parseInt(x,10);
+    if (Number.isFinite(n)) set.add(n);
+  });
+  return set;
+}
+function countPins(str){ return setFromPinsStr(str).size; }
+function arrowBucket(a){
+  if (a === 'Unknown' || a == null) return 'U';
+  const n = Number(a);
+  if (!Number.isFinite(n)) return 'U';
+  if (n <= 10) return '10';
+  if (n <= 15) return '15';
+  if (n <= 20) return '20';
+  if (n <= 25) return '25';
+  if (n <= 30) return '30';
+  return '35';
+}
+
+/* =========================
+   VIEW NAV
+========================= */
+function setView(v){
+  state.view = v;
+  ['tabLog','tabPractice','tabDash','tabSettings'].forEach(id=>el(id).classList.remove('on'));
+  el('tabLog').classList.toggle('on', v==='log');
+  el('tabPractice').classList.toggle('on', v==='practice');
+  el('tabDash').classList.toggle('on', v==='dash');
+  el('tabSettings').classList.toggle('on', v==='settings');
+
+  el('viewLog').style.display = (v==='log') ? 'block' : 'none';
+  el('viewPractice').style.display = (v==='practice') ? 'block' : 'none';
+  el('viewDash').style.display = (v==='dash') ? 'block' : 'none';
+  el('viewSettings').style.display = (v==='settings') ? 'block' : 'none';
+
+  if (v==='dash') renderDashboard();
+  if (v==='practice') renderPractice();
+  if (v==='settings') renderSettings();
+
+  renderHud();
+  saveAll();
+}
+setView(state.view);
+
+/* =========================
+   SETTINGS
+========================= */
+function renderSettings(){
+  el('spareSystem').value = state.settings.spareSystem || '3-6-9';
+  el('spareOther').value = state.settings.spareOther || '';
+}
+function saveSettings(){
+  state.settings.spareSystem = el('spareSystem').value;
+  state.settings.spareOther = el('spareOther').value;
+  saveAll();
+}
+
+/* =========================
+   SESSION LANE CONDITION
+========================= */
+function ensureGameMeta(game){
+  if (!state.gameMeta[String(game)]) state.gameMeta[String(game)] = { laneCondition: 'Unknown' };
+  if (!state.gameMeta[String(game)].laneCondition) state.gameMeta[String(game)].laneCondition = 'Unknown';
+}
+function getLaneCondition(game){
+  ensureGameMeta(game);
+  return state.gameMeta[String(game)].laneCondition || 'Unknown';
+}
+function setLaneCondition(cond){
+  ensureGameMeta(state.game);
+  state.gameMeta[String(state.game)].laneCondition = cond;
+  saveAll();
+  renderLaneConditionUI();
+  renderHud();
+}
+function renderLaneConditionUI(){
+  const cond = getLaneCondition(state.game);
+  const map = { Fresh:'condFresh', Transition:'condTransition', Burn:'condBurn', Unknown:'condUnknown' };
+  Object.values(map).forEach(id=>el(id).classList.remove('on'));
+  (el(map[cond] || 'condUnknown')).classList.add('on');
+}
+
+/* =========================
+   COACH UI + FEEDBACK
+========================= */
+function dismissCoach(){
+  el('coachCard').style.display = 'none';
+  el('coachWhy').style.display = 'none';
+  el('coachBadges').style.display = 'none';
+}
+function showCoach(msg, opts){
+  el('coachText').textContent = msg;
+
+  const badges = el('coachBadges');
+  const parts = [];
+  if (opts && opts.confidence != null) parts.push(`<span class="badge">Confidence <strong>${opts.confidence}%</strong></span>`);
+  if (opts && opts.maxScore != null) parts.push(`<span class="badge">Max score <strong>${opts.maxScore}</strong></span>`);
+  if (opts && opts.laneCondition) parts.push(`<span class="badge">Condition <strong>${opts.laneCondition}</strong></span>`);
+  badges.innerHTML = parts.join('');
+  badges.style.display = parts.length ? 'flex' : 'none';
+
+  if (opts && opts.whyText){
+    el('coachWhy').textContent = opts.whyText;
+    el('coachWhy').style.display = 'block';
+  } else {
+    el('coachWhy').style.display = 'none';
+  }
+
+  el('coachCard').style.display = 'flex';
+}
+function coachFeedback(helpful){
+  const mem = state.coachMem;
+  if (!mem.lastFocus || !mem.lastFeatures){ dismissCoach(); return; }
+
+  const step = helpful ? 1 : -1;
+  state.model.weights[mem.lastFocus] = clamp((state.model.weights[mem.lastFocus]||0) + step, -8, 8);
+
+  const others = ['Feet','Eyes','Speed','Hand'].filter(x=>x!==mem.lastFocus);
+  for (const o of others){
+    state.model.weights[o] = clamp((state.model.weights[o]||0) + (helpful ? -0.2 : 0.2), -8, 8);
+  }
+  saveAll();
+  dismissCoach();
+  renderHud();
+}
+function resetCoachMemory(){
+  state.coachMem = { ...DEFAULT_COACHMEM };
+  state.model = { ...DEFAULT_MODEL, weights: { ...DEFAULT_MODEL.weights } };
+  state.stats = { ...DEFAULT_STATS, contexts: {} };
+  saveAll();
+  dismissCoach();
+  renderHud();
+  alert('Coach + predictor stats reset.');
+}
+
+/* =========================
+   STICKY BAR
+========================= */
+function stepLabel(step){
+  const map = {
+    s_b1_result: ["Ball 1", "Strike or not a strike."],
+    s_b1_leave: ["Ball 1 leave", "Pick the pins standing."],
+    s_b1_quality: ["Ball 1 quality", "Good or bad."],
+    s_b1_label: ["Ball 1 label", "Speed or release + details."],
+    s_b1_arrows: ["Ball 1 arrows", "Select your arrow board."],
+    s_carry: ["Carry quality", "Required every shot."],
+    s_hook: ["Hook timing", "Early / On time / Late / Never."],
+    s_b2_result: ["Ball 2", "Spare or miss."],
+    s_b2_missdir: ["Spare miss direction", "Left / Right."],
+    s_b2_leave: ["After Ball 2", "Pins still standing."],
+    s_b2_quality: ["Ball 2 quality", "Good or bad."],
+    s_b2_label: ["Ball 2 label", "Speed or release + details."],
+    s_b2_arrows: ["Ball 2 arrows", "Select your arrow board."],
+    s_tags: ["Tags", "Optional."],
+    s_save: ["Save frame", "Lock it in."]
+  };
+  return map[step] || ["Next", "Keep going."];
+}
+function renderSticky(){
+  const [t, s] = stepLabel(activeStep);
+  el('stickyTitle').textContent = `Next: ${t}`;
+  el('stickySub').textContent = s;
+}
+function jumpToActive(){
+  el(activeStep).scrollIntoView({ behavior:"smooth", block:"start" });
+}
+function undoLast(){
+  if (!state.frames.length) return alert('Nothing to undo.');
+  if (!confirm('Undo last saved frame?')) return;
+  state.frames.pop();
+  saveAll();
+  renderAll();
+}
+
+/* =========================
+   FRAME MODEL
+========================= */
+function newFrame(){
+  return {
+    game: state.game,
+    frame: state.frame,
+    tags: new Set(),
+    focus: null,
+    focusWhy: null,
+    focusConfidence: null,
+    laneCondition: getLaneCondition(state.game),
+    ball1: { isStrike:null, leave:null, arrows:null, carry:null, quality:null, cause:null, tempo:null, effort:null, release:null, hook:null },
+    ball2: { exists:false, isSpare:null, missDir:null, leave:null, arrows:null, quality:null, cause:null, tempo:null, effort:null, release:null }
+  };
+}
+ensureGameMeta(state.game);
+state.current = newFrame();
+
+/* =========================
+   FLOW
+========================= */
+function renderFrameHeader(){ el('frame').textContent = `Game ${state.game} · Frame ${state.frame}`; }
+function resetFrame(){
+  state.current = newFrame();
+  dismissCoach();
+  showStep('s_b1_result');
+  renderAll();
+}
+function b1Strike(){
+  dismissCoach();
+  state.current.ball1.isStrike = true;
+  state.current.ball1.leave = null;
+  state.current.ball1.hook = null;
+  state.current.ball1.carry = null;
+  state.current.focus = null;
+  state.current.ball2 = { exists:false, isSpare:null, missDir:null, leave:null, arrows:null, quality:null, cause:null, tempo:null, effort:null, release:null };
+  showStep('s_b1_quality');
+  renderAll();
+}
+function b1Open(){
+  dismissCoach();
+  state.current.ball1.isStrike = false;
+  state.current.ball1.carry = null;
+  showStep('s_b1_leave');
+  renderAll();
+}
+
+/* ===== QUALITY + LABELS ===== */
+function setQuality(which, q){
+  const b = (which === 'b1') ? state.current.ball1 : state.current.ball2;
+  b.quality = q;
+  if (q === 'Bad'){
+    showStep(which === 'b1' ? 's_b1_label' : 's_b2_label');
+    renderAll();
+    return;
+  }
+  showStep(which === 'b1' ? 's_b1_arrows' : 's_b2_arrows');
+  renderAll();
+}
+function setCause(which, c){
+  const b = (which === 'b1') ? state.current.ball1 : state.current.ball2;
+  b.cause = c;
+  if (c === 'Speed') b.release = null;
+  if (c === 'Release'){ b.tempo = null; b.effort = null; }
+  renderAll(); autoAdvanceLabel(which);
+}
+function presetSpeed(which, tempo, effort){
+  const b = (which === 'b1') ? state.current.ball1 : state.current.ball2;
+  b.cause = 'Speed'; b.tempo = tempo; b.effort = effort; b.release = null;
+  renderAll(); autoAdvanceLabel(which);
+}
+function setTempo(which, t){
+  const b = (which === 'b1') ? state.current.ball1 : state.current.ball2;
+  b.tempo = t; renderAll(); autoAdvanceLabel(which);
+}
+function setEffort(which, e){
+  const b = (which === 'b1') ? state.current.ball1 : state.current.ball2;
+  b.effort = e; renderAll(); autoAdvanceLabel(which);
+}
+function setRelease(which, r){
+  const b = (which === 'b1') ? state.current.ball1 : state.current.ball2;
+  b.cause = 'Release'; b.release = r; b.tempo = null; b.effort = null;
+  renderAll(); autoAdvanceLabel(which);
+}
+function labelCompleteBall(b){
+  if (b.quality !== 'Bad') return true;
+  if (!b.cause) return false;
+  if (b.cause === 'Speed') return !!b.tempo && !!b.effort;
+  if (b.cause === 'Release') return !!b.release;
+  return false;
+}
+function autoAdvanceLabel(which){
+  const b = (which === 'b1') ? state.current.ball1 : state.current.ball2;
+  if (!labelCompleteBall(b)) return;
+  showStep(which === 'b1' ? 's_b1_arrows' : 's_b2_arrows');
+}
+
+/* ===== ARROWS ===== */
+function setArrows(which, val){
+  const b = (which === 'b1') ? state.current.ball1 : state.current.ball2;
+  b.arrows = val;
+  if (which === 'b1'){ showStep('s_carry'); }
+  else { showStep('s_tags'); }
+  renderAll();
+  renderHud();
+}
+function setArrowsOther(which){
+  const raw = prompt('Enter board at arrows (1–40):', '12');
+  if (raw === null) return;
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 1 || n > 40){ alert('Enter a number from 1 to 40.'); return; }
+  setArrows(which, n);
+}
+
+/* ===== CARRY QUALITY ===== */
+function setCarry(val){
+  state.current.ball1.carry = val;
+  if (state.current.ball1.isStrike === true) showStep('s_tags');
+  else showStep('s_hook');
+  renderAll();
+  renderHud();
+}
+
+/* ===== HOOK + BALL2 FLOW ===== */
+function setHook(val){ state.current.ball1.hook = val; showStep('s_b2_result'); renderAll(); renderHud(); }
+function b2Spare(){
+  state.current.ball2.exists = true; state.current.ball2.isSpare = true;
+  state.current.ball2.leave = null; state.current.ball2.missDir = null;
+  showStep('s_b2_quality'); renderAll();
+}
+function b2Miss(){ state.current.ball2.exists = true; state.current.ball2.isSpare = false; showStep('s_b2_missdir'); renderAll(); }
+function setSpareMissDir(dir){ state.current.ball2.missDir = dir; showStep('s_b2_leave'); renderAll(); }
+
+/* =========================
+   AI FOCUS PICKER
+========================= */
+function extractFeatures(f){
+  return {
+    laneCondition: f.laneCondition || 'Unknown',
+    b1Bad: f.ball1.quality === 'Bad',
+    b1Cause: f.ball1.cause || null,
+    b1Hook: f.ball1.hook || null,
+    b1Carry: f.ball1.carry || null,
+    b2Miss: f.ball2.exists && f.ball2.isSpare === false,
+    b2Bad: f.ball2.exists && f.ball2.quality === 'Bad',
+    b2Cause: f.ball2.cause || null,
+    b2MissDir: f.ball2.missDir || null
+  };
+}
+function baseScoresFromRules(feat){
+  const s = { Feet:0, Eyes:0, Speed:0, Hand:0 };
+  const why = [];
+  if (feat.b1Bad && feat.b1Cause === 'Speed'){ s.Speed += 3; why.push('B1 Speed'); }
+  if (feat.b1Bad && feat.b1Cause === 'Release'){ s.Hand += 3; why.push('B1 Release'); }
+  if (feat.b2Miss && feat.b2Bad && feat.b2Cause === 'Speed'){ s.Speed += 2; why.push('B2 Speed'); }
+  if (feat.b2Miss && feat.b2Bad && feat.b2Cause === 'Release'){ s.Hand += 2; why.push('B2 Release'); }
+  if (feat.b1Hook === 'Early'){ s.Feet += 2; why.push('Hook early'); }
+  if (feat.b1Hook === 'Late'){ s.Feet += 2; why.push('Hook late'); }
+  if (feat.b1Hook === 'Never'){ s.Hand += 2; why.push('Never hooked'); }
+  if (feat.b2Miss && (feat.b2MissDir === 'Left' || feat.b2MissDir === 'Right')){ s.Feet += 2; why.push('Spare missed'); }
+  if (feat.laneCondition === 'Fresh'){ s.Feet += 1.5; s.Eyes += 1.0; }
+  else if (feat.laneCondition === 'Burn'){ s.Speed += 1.0; s.Hand += 1.0; }
+  else if (feat.laneCondition === 'Transition'){ s.Feet += 1.0; s.Eyes += 0.5; s.Speed += 0.5; }
+  s.Feet += 0.5;
+  return { scores:s, why };
+}
+function chooseFocusForFrame(f){
+  const feat = extractFeatures(f);
+  const { scores, why } = baseScoresFromRules(feat);
+  for (const k of ['Feet','Eyes','Speed','Hand']) scores[k] += (state.model.weights[k] || 0);
+  let best = 'Feet', bestV = -1e9;
+  let second = 'Feet', secondV = -1e9;
+  for (const k of ['Feet','Eyes','Speed','Hand']){
+    const v = scores[k];
+    if (v > bestV){ second = best; secondV = bestV; best = k; bestV = v; }
+    else if (v > secondV){ second = k; secondV = v; }
+  }
+  const gap = bestV - secondV;
+  const confidence = clamp(Math.round(55 + gap * 10), 55, 95);
+  const w = state.model.weights;
+  const whyText =
+    `Picked ${best}. Signals: ${why.length ? why.join(', ') : 'none'} · ` +
+    `Weights: Feet ${w.Feet.toFixed(1)}, Eyes ${w.Eyes.toFixed(1)}, Speed ${w.Speed.toFixed(1)}, Hand ${w.Hand.toFixed(1)}.`;
+  return { focus: best, whyText, confidence, rawScores: scores };
+}
+function focusOneLine(focus){
+  if (focus === 'Feet') return 'Feet: make one move only (+/− 2 boards).';
+  if (focus === 'Eyes') return 'Eyes: keep feet, move target 1–2 boards.';
+  if (focus === 'Speed') return 'Speed: smooth cadence, zero muscling.';
+  if (focus === 'Hand') return 'Hand: stay behind it (no “around”).';
+  return 'Feet: one move.';
+}
+
+/* =========================
+   PIN PICKERS + COMMON LEAVES
+========================= */
+const COMMON_LEAVES = [
+  { name:'10', pins:[10] },
+  { name:'7', pins:[7] },
+  { name:'Bucket', pins:[2,4,5,8] },
+  { name:'3-6-10', pins:[3,6,10] },
+  { name:'2-8-10', pins:[2,8,10] },
+  { name:'Big 4', pins:[4,6,7,10] }
+];
+function buildPinPad(containerId, getSet, setSet){
+  const wrap = el(containerId);
+  wrap.innerHTML = '';
+  for (let n=1;n<=10;n++){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `pinbtn p${n}`;
+    btn.textContent = String(n);
+    btn.onclick = () => {
+      const s = new Set(getSet());
+      if (s.has(n)) s.delete(n); else s.add(n);
+      setSet(s);
+      renderAll();
+      renderHud();
+    };
+    wrap.appendChild(btn);
+  }
+}
+function buildCommon(containerId, applyPins){
+  const wrap = el(containerId);
+  wrap.innerHTML = '';
+  for (const c of COMMON_LEAVES){
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='pill';
+    b.textContent=c.name;
+    b.onclick=()=>applyPins(new Set(c.pins));
+    wrap.appendChild(b);
+  }
+}
+buildPinPad('b1Pins', ()=>setFromPinsStr(state.current.ball1.leave), (s)=>{ state.current.ball1.leave = pinsToStr(s); });
+buildPinPad('b2Pins', ()=>setFromPinsStr(state.current.ball2.leave), (s)=>{ state.current.ball2.leave = pinsToStr(s); });
+buildCommon('b1Common', (s)=>{ state.current.ball1.leave = pinsToStr(s); renderAll(); renderHud(); });
+buildCommon('b2Common', (s)=>{ state.current.ball2.leave = pinsToStr(s); renderAll(); });
+
+function renderPinsUI(){
+  const s1 = setFromPinsStr(state.current.ball1.leave);
+  for (let n=1;n<=10;n++){
+    const btn = document.querySelector(`#b1Pins .p${n}`);
+    if (btn) btn.classList.toggle('on', s1.has(n));
+  }
+  const b1ok = s1.size>0;
+  el('b1Next').classList.toggle('disabled', !b1ok);
+  el('b1Next').disabled = !b1ok;
+
+  const s2 = setFromPinsStr(state.current.ball2.leave);
+  for (let n=1;n<=10;n++){
+    const btn = document.querySelector(`#b2Pins .p${n}`);
+    if (btn) btn.classList.toggle('on', s2.has(n));
+  }
+  const b2ok = s2.size>0;
+  el('b2Next').classList.toggle('disabled', !b2ok);
+  el('b2Next').disabled = !b2ok;
+}
+function finishB1Leave(){ if (!state.current.ball1.leave) return; showStep('s_b1_quality'); renderAll(); renderHud(); }
+function clearB1Leave(){ state.current.ball1.leave=null; renderAll(); renderHud(); }
+function finishB2Leave(){ if (!state.current.ball2.leave) return; showStep('s_b2_quality'); renderAll(); }
+function clearB2Leave(){ state.current.ball2.leave=null; renderAll(); }
+
+/* =========================
+   TAGS
+========================= */
+function toggleTag(t){
+  if (state.current.tags.has(t)) state.current.tags.delete(t);
+  else state.current.tags.add(t);
+  renderAll();
+}
+function finishTags(){ showStep('s_save'); renderAll(); }
+function skipTags(){ state.current.tags = new Set(); showStep('s_save'); renderAll(); }
+
+/* =========================
+   STEP ROUTING + PROGRESS BAR
+========================= */
+const STEPS = [
+  's_b1_result','s_b1_leave','s_b1_quality','s_b1_label','s_b1_arrows',
+  's_carry',
+  's_hook',
+  's_b2_result','s_b2_missdir','s_b2_leave','s_b2_quality','s_b2_label','s_b2_arrows',
+  's_tags','s_save'
+];
+let activeStep = 's_b1_result';
+
+function markStepPulse(stepId){
+  for (const s of STEPS) el(s).classList.remove('stepPulse');
+  el(stepId).classList.add('stepPulse');
+}
+
+function showStep(id){
+  activeStep = id;
+  for (const s of STEPS) el(s).style.display = 'none';
+  el(id).style.display = 'block';
+  markStepPulse(id);
+  renderSticky();
+}
+
+function renderProgress(){
+  const i = Math.max(0, STEPS.indexOf(activeStep));
+  const pct = Math.round(((i+1)/STEPS.length)*100);
+  const bar = el('progressFill');
+  if (bar) bar.style.width = pct + '%';
+}
+
+/* =========================
+   FRAME STRIP MARKS (PIN-FALL) + CUM SCORE
+========================= */
+function carryToDotClass(carry){
+  if (!carry) return '';
+  if (carry === 'Flush') return 'flush';
+  if (carry === 'Light') return 'light';
+  if (carry === 'High') return 'high';
+  return 'bad';
+}
+function strikeIcon(carry){
+  if (!carry) return '';
+  if (carry === 'Flush') return '🎯';
+  if (carry === 'Light') return '🔄';
+  if (carry === 'Lucky') return '⚠';
+  if (carry === 'High') return '⚠';
+  return '';
+}
+function getGameFrames(game){
+  const arr = Array(10).fill(null);
+  for (const fr of state.frames){
+    if (fr.game !== game) continue;
+    const idx = fr.frame - 1;
+    if (idx >= 0 && idx < 10) arr[idx] = fr;
+  }
+  return arr;
+}
+
+function safeNum(n){ return Number.isFinite(n) ? n : 0; }
+function ball1Pins(fr){
+  if (!fr?.ball1) return null;
+  if (fr.ball1.isStrike === true) return 10;
+  const standing1 = countPins(fr.ball1.leave);
+  return clamp(10 - standing1, 0, 10);
+}
+function ball2Pins(fr){
+  if (!fr?.ball2?.exists) return null;
+  const first = safeNum(ball1Pins(fr));
+  if (fr.ball2.isSpare === true) return 10 - first;
+
+  const totalAfter2 = clamp(10 - countPins(fr.ball2.leave), 0, 10);
+  const second = clamp(totalAfter2 - first, 0, 10);
+  return second;
+}
+function fmtBall(n){
+  if (n === 0) return "-";
+  return String(n);
+}
+
+/* Pinfall mark like a scoresheet: X, 9/, 8-1, 9- */
+function frameMarkFor(fr){
+  if (!fr) return { cls:'', mark:'·', dot:'' };
+
+  const carry = fr.ball1?.carry || null;
+  const dot = carryToDotClass(carry);
+
+  if (fr.ball1?.isStrike === true){
+    const icon = strikeIcon(carry);
+    return { cls:'strike', mark: icon ? `X${icon}` : 'X', dot };
+  }
+
+  const first = ball1Pins(fr);
+  if (first == null) return { cls:'', mark:'·', dot };
+
+  if (fr.ball2?.exists && fr.ball2?.isSpare === true){
+    return { cls:'spare', mark:`${fmtBall(first)}/`, dot };
+  }
+
+  if (fr.ball2?.exists && fr.ball2?.isSpare === false){
+    const second = ball2Pins(fr);
+    const s = (second == null) ? "-" : fmtBall(second);
+    const mark = `${fmtBall(first)}-${s}`.replace("--","-");
+    return { cls:'open', mark, dot:'bad' };
+  }
+
+  return { cls:'', mark:`${fmtBall(first)}-`, dot };
+}
+
+/* Actual-roll scoring with "known" cumulative per frame.
+   If a frame can't be fully scored yet (needs bonuses), returns null for that frame. */
+function getActualRollsAndFrameStarts(game){
+  const frames = getGameFrames(game);
+  const rolls = [];
+  const starts = Array(10).fill(null);
+
+  for (let i=0;i<10;i++){
+    const fr = frames[i];
+    if (!fr) break; // stop at first missing frame; later frames aren't "played" yet
+    starts[i] = rolls.length;
+
+    if (fr.ball1?.isStrike === true){
+      if (i === 9){
+        // 10th: best effort based on what we store; we don't explicitly store fill balls,
+        // so treat as [10] and let "unknown" bonuses make it unscorable until end.
+        rolls.push(10);
+      } else {
+        rolls.push(10);
+      }
+      continue;
+    }
+
+    const first = ball1Pins(fr);
+    rolls.push(safeNum(first));
+
+    if (fr.ball2?.exists){
+      if (fr.ball2.isSpare === true){
+        rolls.push(clamp(10 - safeNum(first), 0, 10));
+      } else {
+        const second = ball2Pins(fr);
+        rolls.push(safeNum(second));
+      }
+    } else {
+      rolls.push(0);
+    }
+  }
+
+  return { rolls, starts };
+}
+
+function computeCumulativeByFrame(game){
+  const { rolls, starts } = getActualRollsAndFrameStarts(game);
+  const cum = Array(10).fill(null);
+
+  let score = 0;
+  let rollIndex = 0;
+
+  for (let frame=1; frame<=10; frame++){
+    const start = starts[frame-1];
+    if (start == null) break;
+
+    const first = rolls[rollIndex];
+    if (first == null) break;
+
+    // Strike
+    if (first === 10){
+      const b1 = rolls[rollIndex+1];
+      const b2 = rolls[rollIndex+2];
+      if (b1 == null || b2 == null) { cum[frame-1] = null; break; }
+      score += 10 + b1 + b2;
+      cum[frame-1] = score;
+      rollIndex += 1;
+      continue;
+    }
+
+    const second = rolls[rollIndex+1];
+    if (second == null) break;
+
+    const framePins = first + second;
+    // Spare
+    if (framePins === 10){
+      const bonus = rolls[rollIndex+2];
+      if (bonus == null) { cum[frame-1] = null; break; }
+      score += 10 + bonus;
+      cum[frame-1] = score;
+      rollIndex += 2;
+      continue;
+    }
+
+    // Open
+    score += framePins;
+    cum[frame-1] = score;
+    rollIndex += 2;
+  }
+
+  return cum;
+}
+
+function renderFrameStrip(){
+  const strip = el('frameStrip');
+  if (!strip) return;
+
+  const gameFrames = getGameFrames(state.game);
+  const cum = computeCumulativeByFrame(state.game);
+
+  strip.innerHTML = '';
+  for (let i=1;i<=10;i++){
+    const fr = gameFrames[i-1];
+    const { cls, mark, dot } = frameMarkFor(fr);
+
+    const box = document.createElement('div');
+    box.className = `fbox ${fr ? 'done' : ''} ${cls} ${i===state.frame ? 'cur' : ''}`;
+
+    const dotHtml = `<span class="qdot ${dot||''}"></span>`;
+    const csVal = (cum[i-1] == null) ? '—' : String(cum[i-1]);
+
+    box.innerHTML = `
+      <span class="n">${i}</span>
+      <span class="m">${mark}</span>
+      ${dotHtml}
+      <div class="cs">${fr ? csVal : ''}</div>
+    `;
+
+    box.onclick = () => { state.frame = i; saveAll(); resetFrame(); };
+    strip.appendChild(box);
+  }
+}
+
+/* =========================
+   SCORING + MAX POSSIBLE (unchanged)
+========================= */
+function frameToRolls(fr){
+  if (!fr || !fr.ball1) return null;
+  if (fr.ball1.isStrike === true){
+    if (fr.frame === 10) return [10,10,10];
+    return [10];
+  }
+  const first = 10 - countPins(fr.ball1.leave);
+  if (fr.ball2 && fr.ball2.exists){
+    if (fr.ball2.isSpare === true){
+      if (fr.frame === 10) return [first, 10-first, 10];
+      return [first, 10-first];
+    }
+    const total = 10 - countPins(fr.ball2.leave);
+    const second = clamp(total - first, 0, 10);
+    return [first, second];
+  }
+  return [first, 0];
+}
+function buildMaxRollsForGame(game){
+  const frames = getGameFrames(game);
+  const rolls = [];
+  for (let i=1;i<=9;i++){
+    const fr = frames[i-1];
+    if (fr){
+      const r = frameToRolls(fr);
+      if (r) rolls.push(...r);
+    } else {
+      rolls.push(10);
+    }
+  }
+  const fr10 = frames[9];
+  if (fr10){
+    const r10 = frameToRolls(fr10);
+    if (r10) rolls.push(...r10);
+    else rolls.push(10,10,10);
+  } else {
+    rolls.push(10,10,10);
+  }
+  return rolls;
+}
+function scoreFromRolls(rolls){
+  let score = 0;
+  let rollIndex = 0;
+  for (let frame=1; frame<=10; frame++){
+    const first = rolls[rollIndex] ?? 0;
+    if (first === 10){
+      const b1 = rolls[rollIndex+1] ?? 0;
+      const b2 = rolls[rollIndex+2] ?? 0;
+      score += 10 + b1 + b2;
+      rollIndex += 1;
+    } else {
+      const second = rolls[rollIndex+1] ?? 0;
+      const framePins = first + second;
+      if (framePins === 10){
+        const bonus = rolls[rollIndex+2] ?? 0;
+        score += 10 + bonus;
+      } else {
+        score += framePins;
+      }
+      rollIndex += 2;
+    }
+  }
+  return score;
+}
+function maxPossibleScoreForCurrentGame(){
+  const rolls = buildMaxRollsForGame(state.game);
+  return scoreFromRolls(rolls);
+}
+
+/* =========================
+   SUMMARY BAR
+========================= */
+function renderSummary(){
+  const f = state.current;
+  const chips = [];
+  const add = (label,val)=>chips.push(`<span class="chip"><b>${label}:</b> ${String(val ?? '-')}</span>`);
+  add('Condition', getLaneCondition(state.game));
+  add('Max score', maxPossibleScoreForCurrentGame());
+  if (f.ball1.isStrike === true) add('B1','Strike');
+  if (f.ball1.isStrike === false) add('B1 Leave', f.ball1.leave || '-');
+  if (f.ball1.arrows !== null) add('B1 Arrows', f.ball1.arrows);
+  if (f.ball1.carry) add('Carry', f.ball1.carry);
+  if (f.ball1.quality) add('B1 Q', f.ball1.quality);
+  if (f.ball1.quality==='Bad'){
+    if (f.ball1.cause==='Speed') add('B1 Speed', `${f.ball1.tempo||'-'}+${f.ball1.effort||'-'}`);
+    if (f.ball1.cause==='Release') add('B1 Rel', `${f.ball1.release||'-'}`);
+  }
+  if (f.ball1.hook) add('Hook', f.ball1.hook);
+
+  if (f.ball2.exists){
+    add('B2', f.ball2.isSpare ? 'Spare' : 'Miss');
+    if (f.ball2.arrows !== null) add('B2 Arrows', f.ball2.arrows);
+    if (!f.ball2.isSpare){
+      if (f.ball2.missDir) add('MissDir', f.ball2.missDir);
+      if (f.ball2.leave) add('After B2', f.ball2.leave);
+    }
+    if (f.ball2.quality) add('B2 Q', f.ball2.quality);
+    if (f.ball2.quality==='Bad'){
+      if (f.ball2.cause==='Speed') add('B2 Speed', `${f.ball2.tempo||'-'}+${f.ball2.effort||'-'}`);
+      if (f.ball2.cause==='Release') add('B2 Rel', `${f.ball2.release||'-'}`);
+    }
+  }
+
+  if (f.ball1.isStrike === false && f.focus) add('AI Focus', f.focus);
+  if (f.tags.size) add('Tags', Array.from(f.tags).join(','));
+
+  const bar = el('summaryBar');
+  bar.style.display='flex';
+  bar.innerHTML = chips.join('');
+}
+
+/* =========================
+   COACH MESSAGE (kept as-is)
+========================= */
+function spareSystemLine(){
+  const s = state.settings.spareSystem;
+  if (s==='3-6-9') return 'Spare: 3-6-9 (move feet, same target).';
+  if (s==='cross') return 'Spare: cross-lane straight at pin.';
+  if (s==='arrows') return 'Spare: arrows-based.';
+  return state.settings.spareOther ? `Spare: ${state.settings.spareOther}` : 'Spare: Other.';
+}
+function coachForFrame(frSaved){
+  const cond = frSaved.laneCondition || getLaneCondition(frSaved.game) || 'Unknown';
+  const condLine =
+    (cond === 'Fresh') ? 'Fresh: trust your line.' :
+    (cond === 'Transition') ? 'Transition: small moves.' :
+    (cond === 'Burn') ? 'Burn: friction is loud.' :
+    'Condition unknown.';
+
+  if (frSaved.ball2 && frSaved.ball2.exists && frSaved.ball2.isSpare === false){
+    const dir = frSaved.ball2.missDir;
+    let msg = `Missed spare. ${spareSystemLine()} ${condLine} `;
+    if (frSaved.focus === 'Feet'){
+      msg += (dir === 'Left') ? 'Move feet 2 RIGHT.' :
+            (dir === 'Right') ? 'Move feet 2 LEFT.' :
+            'Pick a repeatable start board.';
+    } else if (frSaved.focus === 'Eyes'){
+      msg += (dir === 'Left') ? 'Move target 1 RIGHT.' :
+            (dir === 'Right') ? 'Move target 1 LEFT.' :
+            'Lock one board with your eyes.';
+    } else if (frSaved.focus === 'Speed'){
+      msg += 'Smoother cadence; don’t decel at the line.';
+    } else if (frSaved.focus === 'Hand'){
+      msg += 'Stay behind it; keep spares straighter.';
+    } else {
+      msg += 'One change only.';
+    }
+    return msg;
+  }
+
+  if (frSaved.ball1 && frSaved.ball1.isStrike === false){
+    const hook = frSaved.ball1.hook || 'Unknown';
+    let msg = `${condLine} ${focusOneLine(frSaved.focus || 'Feet')} `;
+    if ((frSaved.focus || 'Feet') === 'Feet'){
+      if (hook === 'Early') msg += 'Move feet 2 LEFT (or add a hair of speed on burn).';
+      else if (hook === 'Late') msg += 'Move feet 2 RIGHT.';
+      else msg += 'Move 1–2 boards toward your miss.';
+    } else if (frSaved.focus === 'Eyes'){
+      msg += 'Move target 1–2 boards.';
+    } else if (frSaved.focus === 'Speed'){
+      msg += 'Same cadence; loose swing.';
+    } else if (frSaved.focus === 'Hand'){
+      msg += 'More behind it; less around.';
+    }
+    return msg.trim();
+  }
+
+  if (frSaved.ball1 && frSaved.ball1.isStrike === true){
+    const carry = frSaved.ball1.carry || 'Unknown';
+    if (frSaved.ball1.quality === 'Bad') return `Lucky strike. ${condLine} Repeat; don’t chase it.`;
+    if (carry === 'Light' || carry === 'Lucky') return `Strike (${carry}). ${condLine} Repeat, don’t move.`;
+    return `Strike (${carry}). ${condLine} Repeat tempo.`;
+  }
+  return `${condLine}`;
+}
+
+/* =========================
+   MISS PREDICTOR (unchanged)
+========================= */
+function contextKeyFor(frame){
+  const cond = frame.laneCondition || 'Unknown';
+  const a = arrowBucket(frame.ball1.arrows);
+  const tempo = frame.ball1.tempo || 'U';
+  const eff = frame.ball1.effort || 'U';
+  const carry = frame.ball1.carry || 'U';
+  return `${cond}|A${a}|T${tempo}|E${eff}|C${carry}`;
+}
+function outcomeLabel(frameSaved){
+  if (frameSaved.ball2 && frameSaved.ball2.exists && frameSaved.ball2.isSpare === false) return 'Open';
+  const c = frameSaved.ball1?.carry || null;
+  if (c === 'High') return 'High';
+  if (c === 'Light') return 'Light';
+  if (c === 'Flat10') return 'Flat10';
+  if (c === 'Ring10') return 'Ring10';
+  if (c === 'Weak7') return 'Weak7';
+  if (c === 'Lucky') return 'Lucky';
+  if (c === 'Flush') return 'Flush';
+  return 'Other';
+}
+function updatePredictorStats(saved){
+  const key = contextKeyFor(saved);
+  if (!state.stats.contexts[key]) state.stats.contexts[key] = { total:0, counts:{} };
+  const ctx = state.stats.contexts[key];
+  const out = outcomeLabel(saved);
+  ctx.total += 1;
+  ctx.counts[out] = (ctx.counts[out] || 0) + 1;
+}
+function getLastSavedFrame(){
+  if (!state.frames.length) return null;
+  return state.frames[state.frames.length-1];
+}
+function getPredictorSuggestion(){
+  if (state.warnDismissed) return null;
+
+  const planned = {
+    laneCondition: getLaneCondition(state.game),
+    ball1: {
+      arrows: state.current?.ball1?.arrows ?? null,
+      tempo: state.current?.ball1?.tempo ?? null,
+      effort: state.current?.ball1?.effort ?? null,
+      carry: state.current?.ball1?.carry ?? null
+    }
+  };
+
+  if (planned.ball1.arrows == null || planned.ball1.arrows === 'Unknown'){
+    const last = getLastSavedFrame();
+    planned.ball1.arrows = last?.ball1?.arrows ?? null;
+  }
+
+  const key = `${planned.laneCondition || 'Unknown'}|A${arrowBucket(planned.ball1.arrows)}|T${planned.ball1.tempo||'U'}|E${planned.ball1.effort||'U'}|C${planned.ball1.carry||'U'}`;
+  const ctx = state.stats.contexts[key];
+  if (!ctx || ctx.total < 5) return null;
+
+  const entries = Object.entries(ctx.counts).sort((a,b)=>b[1]-a[1]);
+  if (!entries.length) return null;
+
+  const badPriority = ['Open','High','Light','Flat10','Ring10','Weak7','Lucky'];
+  let best = entries[0];
+  for (const p of badPriority){
+    const found = entries.find(e=>e[0]===p);
+    if (found){ best = found; break; }
+  }
+
+  const pct = Math.round((best[1] / ctx.total) * 100);
+  if (pct < 60) return null;
+
+  return { miss: best[0], pct };
+}
+function dismissWarn(){
+  state.warnDismissed = true;
+  renderHud();
+}
+
+/* =========================
+   VALIDATION + SAVE
+========================= */
+function validateFrame(){
+  const f = state.current;
+  if (f.ball1.isStrike === null) return 'Pick Ball 1 (strike or not).';
+  if (!f.ball1.quality) return 'Pick Ball 1 quality.';
+  if (f.ball1.quality==='Bad' && !labelCompleteBall(f.ball1)) return 'Complete Ball 1 label.';
+  if (f.ball1.arrows === null) return 'Pick Ball 1 arrow board.';
+  if (!f.ball1.carry) return 'Pick Ball 1 carry quality (required).';
+
+  if (f.ball1.isStrike === false){
+    if (!f.ball1.leave) return 'Pick Ball 1 leave pins.';
+    if (!f.ball1.hook) return 'Pick hook timing.';
+    if (!f.ball2.exists) return 'Pick Ball 2 result.';
+    if (f.ball2.isSpare === null) return 'Pick Ball 2 result.';
+    if (!f.ball2.quality) return 'Pick Ball 2 quality.';
+    if (f.ball2.quality==='Bad' && !labelCompleteBall(f.ball2)) return 'Complete Ball 2 label.';
+    if (f.ball2.arrows === null) return 'Pick Ball 2 arrow board.';
+    if (f.ball2.isSpare === false){
+      if (!f.ball2.missDir) return 'Pick spare miss direction.';
+      if (!f.ball2.leave) return 'Pick leave after Ball 2.';
+    }
+  }
+  return null;
+}
+
+function saveFrame(){
+  const err = validateFrame();
+  if (err) return alert(err);
+
+  const f = state.current;
+  f.laneCondition = getLaneCondition(f.game);
+
+  let pick = null;
+  if (f.ball1.isStrike === false){
+    pick = chooseFocusForFrame(f);
+    f.focus = pick.focus;
+    f.focusWhy = pick.whyText;
+    f.focusConfidence = pick.confidence;
+
+    state.coachMem.lastFocus = f.focus;
+    state.coachMem.lastFeatures = extractFeatures(f);
+  } else {
+    f.focus = null;
+    f.focusWhy = null;
+    f.focusConfidence = null;
+    state.coachMem.lastFocus = null;
+    state.coachMem.lastFeatures = null;
+  }
+
+  const out = {
+    ts: new Date().toISOString(),
+    game: f.game,
+    frame: f.frame,
+    laneCondition: f.laneCondition,
+    tags: Array.from(f.tags),
+    focus: f.focus || null,
+    focusWhy: f.focusWhy || null,
+    focusConfidence: f.focusConfidence || null,
+    rawScores: pick?.rawScores || null,
+    ball1: { ...f.ball1 },
+    ball2: { ...f.ball2 }
+  };
+
+  state.frames.push(out);
+  updatePredictorStats(out);
+  state.warnDismissed = false;
+  saveAll();
+
+  const msg = coachForFrame(out);
+  const maxScore = maxPossibleScoreForCurrentGame();
+
+  showCoach(msg, {
+    confidence: out.focusConfidence,
+    maxScore: maxScore,
+    laneCondition: out.laneCondition,
+    whyText: out.focusWhy
+  });
+
+  state.frame += 1;
+  if (state.frame === 11){ state.frame = 1; state.game += 1; }
+  ensureGameMeta(state.game);
+  saveAll();
+
+  state.current = newFrame();
+  renderFrameHeader();
+  showStep('s_b1_result');
+  renderAll();
+}
+
+/* =========================
+   DASHBOARD
+========================= */
+function renderDashboard(){
+  const frames = state.frames;
+  const total = frames.length;
+  if (!total){ el('dashText').textContent = 'No frames yet.'; return; }
+
+  const strikes = frames.filter(f => f.ball1 && f.ball1.isStrike===true).length;
+  const spares = frames.filter(f => f.ball2 && f.ball2.exists && f.ball2.isSpare===true).length;
+  const opens  = frames.filter(f => f.ball1 && f.ball1.isStrike===false && f.ball2 && f.ball2.exists && f.ball2.isSpare===false).length;
+
+  const w = state.model.weights;
+
+  el('dashText').textContent = [
+    `Frames logged: ${total}`,
+    `Strike frames: ${strikes}`,
+    `Spare frames: ${spares}`,
+    `Open frames: ${opens}`,
+    ``,
+    `This game condition: ${getLaneCondition(state.game)}`,
+    `This game max possible right now: ${maxPossibleScoreForCurrentGame()}`,
+    ``,
+    `Learned weights:`,
+    `Feet ${w.Feet.toFixed(1)} · Eyes ${w.Eyes.toFixed(1)} · Speed ${w.Speed.toFixed(1)} · Hand ${w.Hand.toFixed(1)}`,
+    ``,
+    `Predictor contexts learned: ${Object.keys(state.stats.contexts).length}`
+  ].join('\n');
+}
+
+/* =========================
+   PRACTICE MODE
+========================= */
+function renderPractice(){
+  const goal = el('practiceGoal').value;
+  const panel = el('practicePanel');
+
+  function mkBtn(txt, fn){
+    const b=document.createElement('button'); b.type='button'; b.textContent=txt; b.onclick=fn; return b;
+  }
+
+  panel.innerHTML = '';
+  const row = document.createElement('div'); row.className='row';
+
+  if (goal==='10pin'){
+    row.appendChild(mkBtn('Made 10', ()=>practiceLog({goal, result:'made'})));
+    row.appendChild(mkBtn('Missed 10', ()=>practiceLog({goal, result:'miss'})));
+  } else if (goal==='7pin'){
+    row.appendChild(mkBtn('Made 7', ()=>practiceLog({goal, result:'made'})));
+    row.appendChild(mkBtn('Missed 7', ()=>practiceLog({goal, result:'miss'})));
+  } else if (goal==='pocket'){
+    row.appendChild(mkBtn('Pocket hit', ()=>practiceLog({goal, result:'hit'})));
+    row.appendChild(mkBtn('Missed pocket', ()=>practiceLog({goal, result:'miss'})));
+  } else if (goal==='speed'){
+    row.appendChild(mkBtn('Good speed', ()=>practiceLog({goal, result:'good'})));
+    row.appendChild(mkBtn('Bad speed', ()=>practiceLog({goal, result:'bad'})));
+  }
+  panel.appendChild(row);
+
+  const data = state.practice.filter(x=>x.goal===goal);
+  const sum = el('practiceSummary');
+  if (!data.length){ sum.style.display='none'; sum.innerHTML=''; return; }
+
+  const good = data.filter(x=>['made','hit','good'].includes(x.result)).length;
+  const total = data.length;
+  sum.style.display='flex';
+  sum.innerHTML = `<span class="chip"><b>${goal}</b> ${good}/${total} (${Math.round((good/total)*100)}%)</span>`;
+}
+function practiceLog(x){ state.practice.push({ ts:new Date().toISOString(), ...x }); saveAll(); renderPractice(); renderHud(); }
+function practiceReset(){
+  const goal = el('practiceGoal').value;
+  if (!confirm(`Reset practice for ${goal}?`)) return;
+  state.practice = state.practice.filter(x=>x.goal!==goal);
+  saveAll(); renderPractice(); renderHud();
+}
+function practiceExport(){
+  const blob = new Blob([JSON.stringify(state.practice, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'bowling_practice_export.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* =========================
+   IMPORT / EXPORT
+========================= */
+function exportAll(){
+  const blob = new Blob([JSON.stringify({
+    settings: state.settings,
+    coachMem: state.coachMem,
+    model: state.model,
+    stats: state.stats,
+    frames: state.frames,
+    practice: state.practice,
+    gameMeta: state.gameMeta,
+    game: state.game,
+    frame: state.frame,
+    view: state.view
+  }, null, 2)], {type:'application/json'});
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'bowling_full_export.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+function triggerImport(){ el('importFile').value = ''; el('importFile').click(); }
+el('importFile').addEventListener('change', async (ev)=>{
+  const file = ev.target.files?.[0];
+  if (!file) return;
+  const text = await file.text();
+  try{
+    const obj = JSON.parse(text);
+    if (!obj || typeof obj !== 'object') throw new Error('Invalid JSON');
+    if (!Array.isArray(obj.frames) || !Array.isArray(obj.practice)) throw new Error('Wrong format');
+
+    state.settings = obj.settings || DEFAULT_SETTINGS;
+    state.coachMem = obj.coachMem ? { ...DEFAULT_COACHMEM, ...obj.coachMem } : { ...DEFAULT_COACHMEM };
+    state.model = obj.model ? { ...DEFAULT_MODEL, ...obj.model, weights: { ...DEFAULT_MODEL.weights, ...(obj.model.weights||{}) } } : { ...DEFAULT_MODEL };
+    state.stats = obj.stats ? { ...DEFAULT_STATS, ...obj.stats, contexts: obj.stats.contexts || {} } : { ...DEFAULT_STATS };
+    state.frames = obj.frames || [];
+    state.practice = obj.practice || [];
+    state.gameMeta = obj.gameMeta || {};
+    state.game = obj.game || 1;
+    state.frame = obj.frame || 1;
+    state.view = obj.view || 'log';
+
+    ensureGameMeta(state.game);
+    state.current = newFrame();
+    saveAll();
+    alert('Import complete.');
+    setView(state.view);
+    renderAll();
+  }catch(e){
+    alert('Import failed: not a valid export from this app.');
+  }
+});
+function clearAll(){
+  if (!confirm('Delete ALL frames + practice + settings on this phone?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+/* =========================
+   FRAME NAV
+========================= */
+el('prev').onclick = () => {
+  state.frame -= 1;
+  if (state.frame === 0){ state.frame = 10; state.game = Math.max(1, state.game-1); }
+  ensureGameMeta(state.game);
+  saveAll(); resetFrame();
+};
+el('next').onclick = () => {
+  state.frame += 1;
+  if (state.frame === 11){ state.frame = 1; state.game += 1; }
+  ensureGameMeta(state.game);
+  saveAll(); resetFrame();
+};
+
+/* =========================
+   HUD: LANE SVG + CONF BARS + WARN
+========================= */
+function carryColor(carry){
+  if (carry === 'Flush') return 'rgba(34,197,94,.90)';
+  if (carry === 'Light') return 'rgba(234,179,8,.90)';
+  if (carry === 'High') return 'rgba(249,115,22,.90)';
+  return 'rgba(239,68,68,.85)';
+}
+function carryRing(carry){
+  if (carry === 'Light') return { bias: +10, kind:'light' };
+  if (carry === 'High') return { bias: -10, kind:'high' };
+  if (carry === 'Flush') return { bias: 0, kind:'flush' };
+  return { bias: 0, kind:'bad' };
+}
+
+/* ✅ FLIPPED: 5 is RIGHT, 35 is LEFT */
+function laneXFromBoard(board){
+  const b = Number(board);
+  const bx = clamp(b, 1, 40);
+  const x0 = 20, x1 = 340;
+  return x1 - ((bx-1)/39) * (x1-x0);
+}
+
+function drawLane(svg, currentShot, lastShot){
+  const W = 360, H = 220;
+  const x0 = 20, x1 = 340;
+  const yFoul = 200, yArrows = 145, yBP = 90, yPins = 35;
+
+  function line(xa,ya,xb,yb, stroke, w, op=1, dash=null){
+    const d = document.createElementNS('http://www.w3.org/2000/svg','line');
+    d.setAttribute('x1',xa); d.setAttribute('y1',ya);
+    d.setAttribute('x2',xb); d.setAttribute('y2',yb);
+    d.setAttribute('stroke',stroke);
+    d.setAttribute('stroke-width',w);
+    d.setAttribute('opacity',op);
+    if (dash) d.setAttribute('stroke-dasharray', dash);
+    d.setAttribute('stroke-linecap','round');
+    return d;
+  }
+  function rect(x,y,w,h, fill, op=1, stroke=null){
+    const r = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    r.setAttribute('x',x); r.setAttribute('y',y);
+    r.setAttribute('width',w); r.setAttribute('height',h);
+    r.setAttribute('fill',fill);
+    r.setAttribute('opacity',op);
+    if (stroke){ r.setAttribute('stroke',stroke); r.setAttribute('stroke-width','1'); }
+    return r;
+  }
+  function text(x,y, str, size=10, fill='rgba(100,116,139,.9)', anchor='middle'){
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x',x); t.setAttribute('y',y);
+    t.setAttribute('font-size',size);
+    t.setAttribute('fill',fill);
+    t.setAttribute('text-anchor',anchor);
+    t.setAttribute('font-family','system-ui, -apple-system, Segoe UI, Roboto, sans-serif');
+    t.textContent = str;
+    return t;
+  }
+  function circle(cx,cy,r, fill, op=1, stroke=null, sw=1){
+    const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx',cx); c.setAttribute('cy',cy);
+    c.setAttribute('r',r);
+    c.setAttribute('fill',fill);
+    c.setAttribute('opacity',op);
+    if (stroke){ c.setAttribute('stroke',stroke); c.setAttribute('stroke-width',sw); }
+    return c;
+  }
+  function path(d, stroke, w, op=1, dash=null){
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d',d);
+    p.setAttribute('fill','none');
+    p.setAttribute('stroke',stroke);
+    p.setAttribute('stroke-width',w);
+    p.setAttribute('opacity',op);
+    p.setAttribute('stroke-linecap','round');
+    p.setAttribute('stroke-linejoin','round');
+    if (dash) p.setAttribute('stroke-dasharray', dash);
+    return p;
+  }
+
+  svg.innerHTML = '';
+  svg.appendChild(rect(0,0,W,H,'rgba(255,255,255,1)'));
+  svg.appendChild(rect(x0, yPins-10, x1-x0, (yFoul-(yPins-10)), 'rgba(248,250,252,1)', 1, 'rgba(226,232,240,.9)'));
+
+  const sheen = document.createElementNS('http://www.w3.org/2000/svg','path');
+  sheen.setAttribute('d', `M ${x0} ${yPins-10} L ${x1} ${yPins-10} L ${x1-30} ${yFoul} L ${x0-30} ${yFoul} Z`);
+  sheen.setAttribute('fill', 'rgba(37,99,235,.06)');
+  svg.appendChild(sheen);
+
+  for (let i=1;i<=40;i++){
+    const xx = laneXFromBoard(i);
+    const op = (i%5===0) ? 0.35 : 0.12;
+    svg.appendChild(line(xx, yPins-10, xx, yFoul, 'rgba(148,163,184,1)', 1, op));
+  }
+
+  svg.appendChild(line(x0, yFoul, x1, yFoul, 'rgba(100,116,139,1)', 2, .55));
+
+  const arrowBoards = [5,10,15,20,25,30,35];
+  for (const b of arrowBoards){
+    const xx = laneXFromBoard(b);
+    svg.appendChild(line(xx, yArrows+8, xx, yArrows-6, 'rgba(100,116,139,1)', 2, .35));
+    svg.appendChild(circle(xx, yArrows+10, 2, 'rgba(100,116,139,.55)'));
+    svg.appendChild(text(xx, yArrows+26, String(b), 9, 'rgba(100,116,139,.7)'));
+  }
+
+  svg.appendChild(rect(x0, yBP-10, x1-x0, 20, 'rgba(226,232,240,.55)', .35));
+
+  const pocketX = laneXFromBoard(18);
+  svg.appendChild(circle(pocketX, yPins+6, 3, 'rgba(37,99,235,.8)', 1));
+  svg.appendChild(text(pocketX, yPins+22, 'POCKET', 9, 'rgba(37,99,235,.7)'));
+
+  function shotToCurve(shot){
+    if (!shot) return null;
+
+    const cond = shot.laneCondition || 'Unknown';
+    const arrows = (shot.arrows && shot.arrows !== 'Unknown') ? Number(shot.arrows) : null;
+    const hook = shot.hook || 'Unknown';
+    const tempo = shot.tempo || null;
+    const effort = shot.effort || null;
+    const carry = shot.carry || null;
+
+    const ax = arrows ? laneXFromBoard(arrows) : laneXFromBoard(10);
+    const startX = ax;
+    const startY = yFoul;
+
+    let bpShift = 0;
+    if (hook === 'Early') bpShift = -18;
+    if (hook === 'OnTime') bpShift = -10;
+    if (hook === 'Late') bpShift = -4;
+    if (hook === 'Never') bpShift = 0;
+
+    if (cond === 'Burn') bpShift += -6;
+    if (cond === 'Fresh') bpShift += +3;
+    if (cond === 'Transition') bpShift += -2;
+
+    if (tempo === 'Fast') bpShift += +4;
+    if (tempo === 'Slow') bpShift += -4;
+    if (effort === 'Muscled') bpShift += +3;
+    if (effort === 'NotMuscled') bpShift += -1;
+
+    const bpX = clamp(ax + bpShift, x0, x1);
+
+    const ring = carryRing(carry);
+    const endX = clamp(pocketX + ring.bias, x0, x1);
+    const endY = yPins+6;
+
+    const c1x = ax;  const c1y = yArrows;
+    const c2x = bpX; const c2y = yBP;
+
+    const d = `M ${startX} ${startY} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${endX} ${endY}`;
+    return { d, ax, bpX, endX, ring };
+  }
+
+  const last = shotToCurve(lastShot);
+  if (last){
+    svg.appendChild(path(last.d, carryColor(lastShot.carry), 4, 0.22));
+    svg.appendChild(circle(last.ax, yArrows, 4, 'rgba(100,116,139,.25)'));
+  }
+
+  const cur = shotToCurve(currentShot);
+  if (cur){
+    const col = carryColor(currentShot.carry);
+    svg.appendChild(path(cur.d, col, 4, 0.95));
+    svg.appendChild(circle(cur.ax, yArrows, 5, col, 0.95, 'rgba(15,23,42,.10)', 1));
+    svg.appendChild(circle(cur.bpX, yBP, 4, col, 0.55));
+
+    const rx = cur.endX;
+    const ring = cur.ring;
+    if (ring.kind === 'flush'){
+      svg.appendChild(circle(rx, yPins+6, 10, 'rgba(34,197,94,.15)', 1, 'rgba(34,197,94,.55)', 2));
+      svg.appendChild(circle(rx, yPins+6, 4, 'rgba(34,197,94,.85)', 0.95));
+    } else if (ring.kind === 'light'){
+      svg.appendChild(circle(rx, yPins+6, 10, 'rgba(234,179,8,.12)', 1, 'rgba(234,179,8,.55)', 2));
+      svg.appendChild(circle(rx+4, yPins+6, 4, 'rgba(234,179,8,.85)', 0.95));
+    } else if (ring.kind === 'high'){
+      svg.appendChild(circle(rx, yPins+6, 10, 'rgba(249,115,22,.12)', 1, 'rgba(249,115,22,.55)', 2));
+      svg.appendChild(circle(rx-4, yPins+6, 4, 'rgba(249,115,22,.85)', 0.95));
+    } else {
+      svg.appendChild(circle(rx, yPins+6, 10, 'rgba(239,68,68,.10)', 1, 'rgba(239,68,68,.45)', 2));
+    }
+  }
+}
+
+function renderConfidenceBars(rawScores){
+  const box = el('confBars');
+  if (!rawScores){ box.style.display = 'none'; box.innerHTML = ''; return; }
+
+  const keys = ['Feet','Eyes','Speed','Hand'];
+  const vals = keys.map(k => Math.max(0.01, (rawScores[k] ?? 0) + 8));
+  const sum = vals.reduce((a,b)=>a+b,0);
+  const pct = {};
+  keys.forEach((k,i)=> pct[k] = Math.round((vals[i]/sum)*100));
+  const best = keys.reduce((a,k)=> pct[k] > pct[a] ? k : a, keys[0]);
+
+  box.innerHTML = `
+    <div class="section-title">AI confidence bars</div>
+    ${keys.map(k => `
+      <div class="barRow ${k===best?'':'muted'}">
+        <div style="font-size:12px; color:${k===best?'#0f172a':'#64748b'}; font-weight:${k===best?'800':'600'};">${k}</div>
+        <div class="barTrack"><div class="barFill" style="width:${pct[k]}%"></div></div>
+        <div class="pct">${pct[k]}%</div>
+      </div>
+    `).join('')}
+  `;
+  box.style.display = 'block';
+}
+function renderLockBanner(){
+  // lock is intentionally disabled in your version; keep hidden
+  el('lockBanner').style.display = 'none';
+}
+function renderWarnPill(){
+  const pill = el('warnPill');
+  const sug = getPredictorSuggestion();
+  if (!sug){ pill.style.display = 'none'; return; }
+  el('warnText').textContent = sug.miss;
+  el('warnPct').textContent = `(${sug.pct}%)`;
+  pill.style.display = 'inline-flex';
+}
+function buildHudCurrentShot(){
+  const cond = getLaneCondition(state.game);
+  const f = state.current;
+  const last = getLastSavedFrame();
+  const carry = f?.ball1?.carry || (last?.ball1?.carry ?? 'Other');
+  const arrows = (f?.ball1?.arrows ?? null) || (last?.ball1?.arrows ?? 10);
+  return {
+    laneCondition: cond,
+    arrows,
+    hook: f?.ball1?.hook || (last?.ball1?.hook ?? 'OnTime'),
+    tempo: f?.ball1?.tempo || null,
+    effort: f?.ball1?.effort || null,
+    carry
+  };
+}
+function buildHudLastShot(){
+  const last = getLastSavedFrame();
+  if (!last) return null;
+  return {
+    laneCondition: last.laneCondition || 'Unknown',
+    arrows: last.ball1?.arrows ?? 10,
+    hook: last.ball1?.hook ?? 'OnTime',
+    tempo: last.ball1?.tempo ?? null,
+    effort: last.ball1?.effort ?? null,
+    carry: last.ball1?.carry ?? 'Other'
+  };
+}
+function renderHud(){
+  el('hudGame').textContent = String(state.game);
+  el('hudFrame').textContent = String(state.frame);
+  el('hudCond').textContent = getLaneCondition(state.game);
+  el('hudMax').textContent = String(maxPossibleScoreForCurrentGame());
+  renderLockBanner();
+  renderWarnPill();
+  const svg = el('laneSvg');
+  const cur = buildHudCurrentShot();
+  const last = buildHudLastShot();
+  drawLane(svg, cur, last);
+  const lastSaved = getLastSavedFrame();
+  renderConfidenceBars(lastSaved?.rawScores || null);
+}
+function renderBadLabelBlocks(){
+  el('b1_speed').style.display = (state.current.ball1.cause === 'Speed') ? 'block' : 'none';
+  el('b1_release').style.display = (state.current.ball1.cause === 'Release') ? 'block' : 'none';
+  el('b2_speed').style.display = (state.current.ball2.cause === 'Speed') ? 'block' : 'none';
+  el('b2_release').style.display = (state.current.ball2.cause === 'Release') ? 'block' : 'none';
+}
+function renderTagsUI(){
+  const ids = {Left:'tagLeft',Right:'tagRight',High:'tagHigh',Light:'tagLight'};
+  for (const [k,id] of Object.entries(ids)){
+    el(id).classList.toggle('on', state.current.tags.has(k));
+  }
+}
+function renderAll(){
+  renderFrameHeader();
+  renderLaneConditionUI();
+  renderFrameStrip();     // now shows pinfall + cumulative
+  renderProgress();
+  renderSummary();
+  renderBadLabelBlocks();
+  renderTagsUI();
+  renderPinsUI();
+
+  for (const s of STEPS) el(s).style.display = 'none';
+  el(activeStep).style.display = 'block';
+  markStepPulse(activeStep);
+  renderSticky();
+
+  if (state.view==='dash') renderDashboard();
+  if (state.view==='practice') renderPractice();
+  if (state.view==='settings') renderSettings();
+
+  renderHud();
+}
+
+/* =========================
+   INIT
+========================= */
+ensureGameMeta(state.game);
+renderFrameHeader();
+showStep('s_b1_result');
+renderAll();
+</script>
+</body>
+</html>
