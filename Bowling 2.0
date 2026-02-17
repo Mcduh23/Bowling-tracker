@@ -1,0 +1,1311 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bowling Lane Graph + AI Coach + Scorekeeping</title>
+  <style>
+    :root{
+      --card:#fff; --text:#0f172a; --muted:#64748b; --border:rgba(226,232,240,.95);
+      --shadow: 0 14px 40px rgba(2,6,23,.10);
+      --r: 18px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:16px;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      color:var(--text);
+      background:linear-gradient(180deg,#f8fafc,#f1f5f9);
+    }
+    h1{ font-size:18px; margin:0; }
+    .sub{ margin-top:6px; font-size:12px; color:var(--muted); line-height:1.35; }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      padding:14px;
+      margin:12px 0;
+      box-shadow:var(--shadow);
+    }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .between{ justify-content:space-between; }
+    .grow{ flex:1; min-width: 260px; }
+    .laneWrap{ border:1px solid var(--border); border-radius:var(--r); overflow:hidden; background:#fff; }
+    svg{ width:100%; height:auto; display:block; }
+    .hint{ font-size:12px; color:var(--muted); margin-top:8px; line-height:1.35; }
+
+    button{
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:#fff;
+      font-size:14px;
+      cursor:pointer;
+      box-shadow:0 8px 18px rgba(2,6,23,.06);
+      user-select:none;
+      touch-action:manipulation;
+    }
+    button:active{ transform:translateY(1px); }
+    button.primary{
+      font-weight:900;
+      border-color:rgba(37,99,235,.35);
+      background:linear-gradient(135deg, rgba(37,99,235,.18), rgba(124,58,237,.12));
+    }
+    button.secondary{ color:var(--muted); }
+
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#fff;
+      font-size:12px;
+      box-shadow:0 1px 0 rgba(2,6,23,.03);
+      user-select:none;
+    }
+    .pill.btn{ cursor:pointer; }
+    .pill.on{
+      border-color:rgba(124,58,237,.42);
+      background:linear-gradient(135deg, rgba(124,58,237,.14), rgba(37,99,235,.10));
+      font-weight:900;
+    }
+    .mono{ font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    .grid2{ display:grid; grid-template-columns: 1.15fr .85fr; gap:12px; }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .segRow{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .segGroup{
+      display:inline-flex;
+      border:1px solid var(--border);
+      border-radius:999px;
+      overflow:hidden;
+      background:#fff;
+      box-shadow:0 8px 18px rgba(2,6,23,.05);
+    }
+    .segBtn{
+      padding:9px 10px;
+      border:0;
+      border-right:1px solid rgba(226,232,240,.9);
+      background:#fff;
+      font-size:12px;
+      cursor:pointer;
+      box-shadow:none;
+    }
+    .segBtn:last-child{ border-right:0; }
+    .segBtn.on{
+      font-weight:900;
+      background:linear-gradient(135deg, rgba(37,99,235,.18), rgba(124,58,237,.12));
+      color:rgba(15,23,42,.92);
+    }
+    .segLabel{
+      font-size:11px; color:rgba(100,116,139,.95); letter-spacing:.02em;
+      text-transform:uppercase;
+      margin:0 0 4px 6px;
+    }
+    .nudge{
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px;
+      border:1px solid var(--border);
+      border-radius:999px;
+      background:#fff;
+      box-shadow:0 8px 18px rgba(2,6,23,.05);
+    }
+    .nudge button{
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:900;
+      box-shadow:none;
+    }
+    .nudgeVal{ min-width:28px; text-align:center; font-weight:900; }
+
+    details{
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:#fff;
+      overflow:hidden;
+    }
+    summary{
+      list-style:none;
+      cursor:pointer;
+      padding:12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      user-select:none;
+      background:linear-gradient(180deg, rgba(248,250,252,.9), rgba(255,255,255,1));
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .detailsBody{ padding:12px; border-top:1px solid rgba(226,232,240,.9); }
+
+    .coachLine{
+      padding:10px 12px;
+      border-radius:16px;
+      border:1px solid var(--border);
+      background:linear-gradient(180deg, rgba(37,99,235,.06), rgba(124,58,237,.04));
+      box-shadow:0 8px 18px rgba(2,6,23,.05);
+      font-size:13px;
+      line-height:1.4;
+      white-space:pre-wrap;
+    }
+    .coachSmall{ color:rgba(15,23,42,.85); }
+    .coachMuted{ color:var(--muted); font-size:12px; }
+
+    .scoreWrap{ border:1px solid var(--border); border-radius:16px; overflow:hidden; background:#fff; }
+    table{ border-collapse:collapse; width:100%; }
+    th, td{ border-bottom:1px solid rgba(226,232,240,.9); padding:10px 8px; font-size:12px; text-align:center; }
+    th{ background:rgba(248,250,252,.8); font-size:11px; color:rgba(100,116,139,.95); letter-spacing:.02em; text-transform:uppercase; }
+
+    .pinDeck{
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:10px;
+      background:#fff;
+      width:100%;
+    }
+    .pinTri{
+      display:grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-template-rows: repeat(4, 38px);
+      gap:8px;
+      align-items:center;
+      justify-items:center;
+      padding:4px;
+    }
+    .pinBtn{
+      width:36px; height:36px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:rgba(248,250,252,.9);
+      box-shadow:0 8px 18px rgba(2,6,23,.05);
+      font-weight:900;
+      cursor:pointer;
+      user-select:none;
+      touch-action:manipulation;
+      padding:0;
+    }
+    .pinBtn:active{ transform: translateY(1px); }
+    .pinBtn.on{
+      border-color: rgba(37,99,235,.45);
+      background: linear-gradient(135deg, rgba(37,99,235,.18), rgba(124,58,237,.12));
+    }
+    .pinBtn.disabled{
+      opacity:.22;
+      cursor:not-allowed;
+      box-shadow:none;
+      background:rgba(241,245,249,.7);
+    }
+    .quickBtns{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+    .kbd{
+      border:1px solid rgba(226,232,240,.95);
+      background:rgba(248,250,252,.85);
+      border-bottom:2px solid rgba(226,232,240,.95);
+      padding:2px 6px;
+      border-radius:8px;
+      font-size:11px;
+      color:rgba(100,116,139,.95);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="row between">
+    <div>
+      <h1>Bowling Lane Graph</h1>
+      <div class="sub">
+        ✅ Pocket stays on the <b>RIGHT pocket (1–3)</b>. ✅ High/Light labels behave normally again.
+        Shortcuts: <span class="kbd">Enter</span> record • <span class="kbd">A/D</span> lineup • <span class="kbd">←/→</span> target
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <div class="row between">
+        <div class="row">
+          <span class="pill"><b>Lineup</b> <span id="vLineup" class="mono">15</span></span>
+          <span class="pill"><b>Target</b> <span id="vTarget" class="mono">10</span></span>
+          <span class="pill"><b>Hook</b> <span id="vHook" class="mono">OnTime</span></span>
+          <span class="pill"><b>Carry</b> <span id="vCarry" class="mono">Flush</span></span>
+          <span class="pill btn on" id="toggleSparePreview" onclick="toggleSparePreview()">Spare Preview</span>
+        </div>
+        <div class="row">
+          <button class="secondary" onclick="undoRoll()">Undo roll</button>
+          <button class="secondary" onclick="newGame()">New game</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin:12px 0 0; padding:12px; box-shadow:none; background:rgba(255,255,255,.7);">
+        <div class="segRow">
+          <div>
+            <div class="segLabel">Lineup</div>
+            <div class="nudge" aria-label="Lineup nudge">
+              <button onclick="nudge('lineup', -1)">−</button>
+              <div class="nudgeVal mono" id="nLineup">15</div>
+              <button onclick="nudge('lineup', +1)">+</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="segLabel">Target</div>
+            <div class="nudge" aria-label="Target nudge">
+              <button onclick="nudge('target', -1)">−</button>
+              <div class="nudgeVal mono" id="nTarget">10</div>
+              <button onclick="nudge('target', +1)">+</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="segLabel">Hook</div>
+            <div class="segGroup" role="group" aria-label="Hook timing">
+              <button class="segBtn" id="hookEarly" onclick="setHook('Early')">Early</button>
+              <button class="segBtn" id="hookOnTime" onclick="setHook('OnTime')">On time</button>
+              <button class="segBtn" id="hookLate" onclick="setHook('Late')">Late</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="segLabel">Carry</div>
+            <div class="segGroup" role="group" aria-label="Carry">
+              <button class="segBtn" id="carryHigh" onclick="setCarry('High')">High</button>
+              <button class="segBtn" id="carryFlush" onclick="setCarry('Flush')">Flush</button>
+              <button class="segBtn" id="carryLight" onclick="setCarry('Light')">Light</button>
+            </div>
+          </div>
+
+          <div class="grow"></div>
+          <button class="secondary" onclick="saveShotNoScore()">Save shot</button>
+        </div>
+      </div>
+
+      <div class="laneWrap" style="margin-top:12px;">
+        <svg id="lane" viewBox="0 0 420 640" aria-label="Lane diagram"></svg>
+      </div>
+
+      <div class="hint">
+        Flush → <b>1–3</b> pocket (right). Light/Late → <b>3</b> pin. High/Early → <b>1–2</b> side.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row between">
+        <span class="pill">Frame <b id="curFrame">1</b> • Roll <b id="curRoll">1</b></span>
+        <span class="pill">Standing <b id="pinsStanding">10</b> • Knocked <b id="pinsKnocked">0</b></span>
+      </div>
+
+      <div class="pinDeck" style="margin-top:10px;">
+        <div class="row between" style="margin-bottom:8px;">
+          <span class="pill"><b>Pins left standing</b></span>
+          <div class="quickBtns">
+            <button class="secondary" onclick="setLeavePreset('strike')">Strike</button>
+            <button class="secondary" onclick="setLeavePreset('gutter')">Gutter</button>
+            <button class="secondary" onclick="setLeavePreset('resetToStanding')">Reset</button>
+            <button class="primary" onclick="recordRollAndSaveShot()">Record</button>
+          </div>
+        </div>
+        <div class="pinTri" id="pinGrid" aria-label="Pin deck"></div>
+        <div class="hint" style="margin:8px 0 0;">
+          Tap pins to mark what’s still up. Disabled pins were already down.
+        </div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="coachLine" id="coachSummary">
+          <div class="coachSmall"><b>Coach:</b> Tap pins + Record.</div>
+          <div class="coachMuted">You’ll see one actionable adjustment here.</div>
+        </div>
+
+        <details style="margin-top:10px;">
+          <summary>
+            <span class="pill"><b>Coach details</b></span>
+            <span class="pill">Expand</span>
+          </summary>
+          <div class="detailsBody">
+            <div id="coachDetails" class="coachMuted" style="white-space:pre-wrap;">—</div>
+          </div>
+        </details>
+
+        <details style="margin-top:10px;">
+          <summary>
+            <span class="pill"><b>Scorecard</b></span>
+            <span class="pill">Expand</span>
+          </summary>
+          <div class="detailsBody">
+            <div class="scoreWrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Frame</th><th>R1</th><th>R2</th><th>R3</th><th>Frame</th><th>Total</th>
+                  </tr>
+                </thead>
+                <tbody id="scoreBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+
+        <details style="margin-top:10px;">
+          <summary>
+            <span class="pill"><b>Danger zone</b></span>
+            <span class="pill">Expand</span>
+          </summary>
+          <div class="detailsBody">
+            <div class="row">
+              <button class="secondary" onclick="undoShotOnly()">Undo last shot (no score)</button>
+              <button class="secondary" onclick="clearAll()">Clear all</button>
+            </div>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================
+   CONSTANTS
+========================= */
+const KEY_SHOTS = "lane_graph_topdown_v15";
+const KEY_GAME  = "lane_graph_game_v4";
+const KEY_UI    = "lane_graph_ui_v1";
+
+const ARROWS = [5,10,15,20,25,30,35];
+const HOOKS = ["Early","OnTime","Late"];
+const CARRIES = ["High","Flush","Light"];
+
+const FEET = { foul:0, dots:6, arrows:15, pins:60 };
+
+const W = 420, H = 640;
+const LANE = { x0: 90, x1: 330, y0: 60, y1: 600 };
+const GUT  = { left0: 60, left1: 90, right0: 330, right1: 360 };
+
+const ARROW_Y_FEET = {
+  20: 16.2,
+  15: 15.6, 25: 15.6,
+  10: 14.9, 30: 14.9,
+  5:  14.2, 35: 14.2
+};
+
+const PIN_STEP_BOARDS = 12 / 1.0625;
+const HEAD_BOARD = 20;
+
+// Bowler view: board increases to the LEFT on screen because xFromBoard is flipped.
+const BOARD_1 = HEAD_BOARD;
+const BOARD_2 = HEAD_BOARD + 0.5 * PIN_STEP_BOARDS; // left of 1
+const BOARD_3 = HEAD_BOARD - 0.5 * PIN_STEP_BOARDS; // right of 1
+
+const POCKET_12_BOARD = (BOARD_1 + BOARD_2) / 2;
+const POCKET_13_BOARD = (BOARD_1 + BOARD_3) / 2;
+
+// ✅ right pocket
+const POCKET_BOARD = POCKET_13_BOARD;
+
+const PIN_LAYOUT = { r: 10, rowDy: 24, headY: () => (LANE.y0 + 46) + 3 * 24 };
+
+const PIN_UI_POS = {
+  7:{r:1,c:1}, 8:{r:1,c:3}, 9:{r:1,c:5}, 10:{r:1,c:7},
+  4:{r:2,c:2}, 5:{r:2,c:4}, 6:{r:2,c:6},
+  2:{r:3,c:3}, 3:{r:3,c:5},
+  1:{r:4,c:4},
+};
+const ALL_PINS = [1,2,3,4,5,6,7,8,9,10];
+
+/* =========================
+   STATE
+========================= */
+let shots = loadShots() || [];
+let cur = { lineup: 15, target: 10, hook: "OnTime", carry: "Flush" };
+let game = loadGame() || newGameState();
+let uiLeaveSet = new Set();
+let ui = loadUi() || { showSparePreview: true };
+
+/* =========================
+   STORAGE
+========================= */
+function normalizeCarry(c){ return (c === "Inside") ? "Light" : c; }
+function normalizeShot(s){
+  return {
+    lineup: Number(s?.lineup ?? 15),
+    target: Number(s?.target ?? 10),
+    hook: (HOOKS.includes(s?.hook) ? s.hook : "OnTime"),
+    carry: (CARRIES.includes(normalizeCarry(s?.carry)) ? normalizeCarry(s.carry) : "Flush"),
+    ts: Number(s?.ts ?? Date.now()),
+    meta: (s?.meta && typeof s.meta === "object") ? s.meta : {}
+  };
+}
+function loadShots(){
+  try{
+    const raw =
+      localStorage.getItem(KEY_SHOTS) ||
+      localStorage.getItem("lane_graph_topdown_v14") ||
+      localStorage.getItem("lane_graph_topdown_v13") ||
+      localStorage.getItem("lane_graph_topdown_v12");
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!Array.isArray(obj.shots)) return null;
+    return obj.shots.map(normalizeShot);
+  }catch(e){ return null; }
+}
+function persistShots(){ localStorage.setItem(KEY_SHOTS, JSON.stringify({ shots })); }
+
+function newGameState(){
+  return {
+    frames: Array.from({length:10}, ()=>({ rolls: [] })),
+    curFrame: 0,
+    done: false,
+    pinsSet: ALL_PINS.slice(),
+    history: []
+  };
+}
+function loadGame(){
+  try{
+    const raw =
+      localStorage.getItem(KEY_GAME) ||
+      localStorage.getItem("lane_graph_game_v3") ||
+      localStorage.getItem("lane_graph_game_v2") ||
+      localStorage.getItem("lane_graph_game_v1");
+    if (!raw) return null;
+    const g = JSON.parse(raw);
+    if (!g || !Array.isArray(g.frames) || g.frames.length !== 10) return null;
+    if (!Array.isArray(g.pinsSet)) g.pinsSet = ALL_PINS.slice();
+    if (!Array.isArray(g.history)) g.history = [];
+    return g;
+  }catch(e){ return null; }
+}
+function persistGame(){ localStorage.setItem(KEY_GAME, JSON.stringify(game)); }
+
+function loadUi(){
+  try{
+    const raw = localStorage.getItem(KEY_UI);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj !== "object") return null;
+    return { showSparePreview: obj.showSparePreview !== false };
+  }catch(e){ return null; }
+}
+function persistUi(){ localStorage.setItem(KEY_UI, JSON.stringify(ui)); }
+
+/* =========================
+   MATH
+========================= */
+function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+function lerp(a,b,t){ return a + (b-a)*t; }
+
+function yFromFeet(ft){
+  const t = clamp((ft - FEET.foul) / (FEET.pins - FEET.foul), 0, 1);
+  return LANE.y1 - t*(LANE.y1 - LANE.y0);
+}
+function xFromBoard(board){
+  const b = clamp(Number(board)||20, 1, 40);
+  const t = (b - 1) / 39;
+  return LANE.x1 - t*(LANE.x1 - LANE.x0);
+}
+function carryColor(c){
+  if (c==="Flush") return "rgba(34,197,94,.92)";
+  if (c==="High")  return "rgba(249,115,22,.92)";
+  if (c==="Light") return "rgba(234,179,8,.92)";
+  return "rgba(100,116,139,.6)";
+}
+
+/* =========================
+   SVG HELPERS
+========================= */
+function ns(tag){ return document.createElementNS("http://www.w3.org/2000/svg", tag); }
+function add(svg, node){ svg.appendChild(node); return node; }
+
+function rect(x,y,w,h, fill, stroke=null, op=1){
+  const r=ns("rect");
+  r.setAttribute("x",x); r.setAttribute("y",y);
+  r.setAttribute("width",w); r.setAttribute("height",h);
+  r.setAttribute("fill",fill); r.setAttribute("opacity",op);
+  if (stroke){ r.setAttribute("stroke",stroke); r.setAttribute("stroke-width","1"); }
+  return r;
+}
+function line(x1,y1,x2,y2, stroke, w=1, op=1, dash=null){
+  const l=ns("line");
+  l.setAttribute("x1",x1); l.setAttribute("y1",y1);
+  l.setAttribute("x2",x2); l.setAttribute("y2",y2);
+  l.setAttribute("stroke",stroke); l.setAttribute("stroke-width",w);
+  l.setAttribute("opacity",op);
+  l.setAttribute("stroke-linecap","round");
+  if (dash) l.setAttribute("stroke-dasharray", dash);
+  return l;
+}
+function circle(cx,cy,r, fill, op=1, stroke=null, sw=1){
+  const c=ns("circle");
+  c.setAttribute("cx",cx); c.setAttribute("cy",cy);
+  c.setAttribute("r",r); c.setAttribute("fill",fill);
+  c.setAttribute("opacity",op);
+  if (stroke){ c.setAttribute("stroke",stroke); c.setAttribute("stroke-width",sw); }
+  return c;
+}
+function text(x,y,str,size=11, fill="rgba(100,116,139,.85)", anchor="middle", weight="600", op=1){
+  const t=ns("text");
+  t.setAttribute("x",x); t.setAttribute("y",y);
+  t.setAttribute("font-size",size);
+  t.setAttribute("fill",fill);
+  t.setAttribute("text-anchor",anchor);
+  t.setAttribute("font-family","system-ui, -apple-system, Segoe UI, Roboto, sans-serif");
+  t.setAttribute("font-weight", weight);
+  t.setAttribute("opacity", op);
+  t.textContent=str;
+  return t;
+}
+function path(d, stroke, w=5, op=1, dash=null){
+  const p=ns("path");
+  p.setAttribute("d",d);
+  p.setAttribute("fill","none");
+  p.setAttribute("stroke",stroke);
+  p.setAttribute("stroke-width",w);
+  p.setAttribute("opacity",op);
+  p.setAttribute("stroke-linecap","round");
+  p.setAttribute("stroke-linejoin","round");
+  if (dash) p.setAttribute("stroke-dasharray", dash);
+  return p;
+}
+function arrowTri(x, y, w, h){
+  const p=ns("polygon");
+  const pts = [[x, y-h],[x-w, y+h*0.7],[x+w, y+h*0.7]];
+  p.setAttribute("points", pts.map(a=>a.join(",")).join(" "));
+  p.setAttribute("fill","rgba(220,38,38,.85)");
+  p.setAttribute("stroke","rgba(220,38,38,.95)");
+  p.setAttribute("stroke-width","1");
+  return p;
+}
+
+/* =========================
+   PINS / TARGETS
+========================= */
+function pinPosition(pin){
+  const step = PIN_STEP_BOARDS;
+  const HB = HEAD_BOARD;
+  const headY = PIN_LAYOUT.headY();
+  const dy = PIN_LAYOUT.rowDy;
+
+  return ({
+    1:  { board: HB,            y: headY - 0*dy },
+    2:  { board: HB + 0.5*step, y: headY - 1*dy }, // left
+    3:  { board: HB - 0.5*step, y: headY - 1*dy }, // right
+    4:  { board: HB + 1.0*step, y: headY - 2*dy }, // left
+    5:  { board: HB,            y: headY - 2*dy },
+    6:  { board: HB - 1.0*step, y: headY - 2*dy }, // right
+    7:  { board: HB + 1.5*step, y: headY - 3*dy }, // left
+    8:  { board: HB + 0.5*step, y: headY - 3*dy },
+    9:  { board: HB - 0.5*step, y: headY - 3*dy },
+    10: { board: HB - 1.5*step, y: headY - 3*dy }, // right
+  }[pin] || { board: HB, y: headY });
+}
+
+function applyEarlyBiasIfHeadArea(impact, shot, meta){
+  if (shot.hook !== "Early") return impact;
+  const isHeadArea =
+    meta?.kind === "FIRSTBALL_POCKET" ||
+    meta?.kind === "FIRSTBALL_HEAD" ||
+    (meta?.kind === "SPARE" && meta?.pin === 1);
+  if (!isHeadArea) return impact;
+  return { ...impact, board: clamp(impact.board + 1.2, 1, 40), label: impact.label };
+}
+
+function spareImpactFromStandingPins(pinsSet, shot, labelPrefix="SPARE"){
+  const pins = Array.from(pinsSet).map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
+  if (!pins.length) return null;
+  const keyPin = (pins.length === 1) ? pins[0] : pins[0];
+  let pos = pinPosition(keyPin);
+  pos = applyEarlyBiasIfHeadArea(
+    { ...pos, label: `${labelPrefix} → ${keyPin}` },
+    shot,
+    { kind: "SPARE", pin: keyPin }
+  );
+  return pos;
+}
+
+/* =========================
+   FIRST BALL IMPACT (RIGHT POCKET)
+========================= */
+function impactPointForShot(shot){
+  const p1 = pinPosition(1);
+  const p2 = pinPosition(2);
+  const p3 = pinPosition(3);
+  const mid = (a,b) => ({ board:(a.board+b.board)/2, y:(a.y+b.y)/2 });
+
+  let impact;
+  let meta = { kind: "FIRSTBALL_POCKET" };
+
+  // Flush -> right pocket (1–3)
+  if (shot.carry === "Flush"){
+    impact = { ...mid(p1,p3), label: "1–3" };
+    meta = { kind: "FIRSTBALL_POCKET" };
+  }
+  // Light+Late -> 3 pin (right side)
+  else if (shot.carry === "Light" && shot.hook === "Late"){
+    impact = { ...p3, label: "3" };
+    meta = { kind: "FIRSTBALL_HEAD" };
+  }
+  // High+Early -> left pocket (1–2 side)
+  else if (shot.carry === "High" && shot.hook === "Early"){
+    impact = { ...mid(p1,p2), label: "1–2" };
+    meta = { kind: "FIRSTBALL_POCKET" };
+  }
+  // Default mapping
+  else if (shot.carry === "Light"){
+    impact = { ...mid(p1,p3), label: "1–3" };
+    meta = { kind: "FIRSTBALL_POCKET" };
+  } else if (shot.carry === "High"){
+    impact = { ...mid(p1,p2), label: "1–2" };
+    meta = { kind: "FIRSTBALL_POCKET" };
+  } else {
+    impact = { ...mid(p1,p3), label: "1–3" };
+    meta = { kind: "FIRSTBALL_POCKET" };
+  }
+
+  return applyEarlyBiasIfHeadArea(impact, shot, meta);
+}
+
+function breakpointFeetForShot(s){
+  let ft = 42;
+  if (s.hook === "Early") ft -= 3.0;
+  if (s.hook === "Late")  ft += 4.0;
+  if (s.carry === "High")  ft -= 1.5;
+  if (s.carry === "Light") ft += 1.5;
+  return clamp(ft, 34, 52);
+}
+function breakpointBoardForShot(s, impactBoard){
+  let base = s.target + ((s.hook==="Early") ? -3 : (s.hook==="Late") ? -1 : -2);
+  if (s.carry === "High") base += 1.2;
+  if (s.carry === "Light") base -= 1.0;
+  return clamp(lerp(base, impactBoard, 0.55), 1, 40);
+}
+function drawImpactCrosshair(svg, pt, stroke, op, labelText, labelOp){
+  const x = xFromBoard(pt.board);
+  const y = pt.y;
+  add(svg, line(x-9,y, x+9,y, stroke, 2, op));
+  add(svg, line(x,y-9, x,y+9, stroke, 2, op));
+  add(svg, circle(x,y, 5, "rgba(255,255,255,0)", op, stroke, 2));
+  if (labelText) add(svg, text(x, y-12, labelText, 10, stroke, "middle", "900", labelOp));
+}
+
+/* =========================
+   SPARE PREVIEW
+========================= */
+function pinsSetAsSet(){ return new Set((game.pinsSet || []).map(Number)); }
+function futureLeaveFromUi(){
+  const standingBefore = pinsSetAsSet();
+  const future = new Set();
+  for (const p of uiLeaveSet){
+    if (standingBefore.has(p)) future.add(Number(p));
+  }
+  return future;
+}
+function drawGuideShot(svg, shot, impact, opts){
+  const yFoul = yFromFeet(0);
+  const xStart = xFromBoard(opts.startBoard ?? shot.lineup);
+
+  const yAim = yFromFeet(ARROW_Y_FEET[shot.target] ?? 15);
+  const xAim = xFromBoard(shot.target);
+
+  const xEnd = xFromBoard(impact.board);
+  const yEnd = impact.y;
+
+  const yBP = yFromFeet(38);
+  const xBP = xFromBoard(lerp(shot.target, impact.board, 0.35));
+
+  const c1x = xStart;
+  const c1y = yFromFeet(6);
+  const c2x = lerp(xStart, xAim, 0.55);
+  const c2y = yAim + 85;
+  const d1 = `M ${xStart} ${yFoul} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${xAim} ${yAim}`;
+
+  const c3x = xAim;
+  const c3y = yAim - 65;
+  const c4x = xBP;
+  const c4y = yBP;
+  const d2 = `M ${xAim} ${yAim} C ${c3x} ${c3y}, ${c4x} ${c4y}, ${xEnd} ${yEnd}`;
+
+  add(svg, path(`${d1} ${d2}`, opts.stroke, opts.width, opts.opacity, opts.dash));
+  add(svg, circle(xEnd, yEnd, 5, opts.stroke, opts.opacity));
+  drawImpactCrosshair(svg, impact, opts.stroke, opts.opacity, impact.label, 0.55);
+}
+
+/* =========================
+   DRAW
+========================= */
+function draw(){
+  const svg = document.getElementById("lane");
+  svg.innerHTML = "";
+
+  add(svg, rect(0,0,W,H,"rgba(255,255,255,1)"));
+  add(svg, rect(GUT.left0,  LANE.y0, GUT.left1-GUT.left0,   LANE.y1-LANE.y0, "rgba(15,23,42,.06)"));
+  add(svg, rect(GUT.right0, LANE.y0, GUT.right1-GUT.right0, LANE.y1-LANE.y0, "rgba(15,23,42,.06)"));
+  add(svg, rect(LANE.x0, LANE.y0, LANE.x1-LANE.x0, LANE.y1-LANE.y0, "rgba(250,250,252,1)", "rgba(226,232,240,.95)"));
+
+  for (let i=1;i<=40;i++){
+    const x = xFromBoard(i);
+    const o = (i%5===0) ? 0.35 : 0.12;
+    add(svg, line(x, LANE.y0, x, LANE.y1, "rgba(148,163,184,1)", 1, o));
+  }
+
+  const yFoul = yFromFeet(FEET.foul);
+  add(svg, line(LANE.x0, yFoul, LANE.x1, yFoul, "rgba(220,38,38,.9)", 3, 0.85));
+
+  const yDots = yFromFeet(FEET.dots);
+  add(svg, line(LANE.x0, yDots, LANE.x1, yDots, "rgba(226,232,240,1)", 2, 0.75));
+  [8,12,16,20,24,28,32].forEach(b=> add(svg, circle(xFromBoard(b), yDots, 3, "rgba(15,23,42,.22)", 0.9)) );
+
+  const y15 = yFromFeet(15);
+  add(svg, line(LANE.x0, y15, LANE.x1, y15, "rgba(226,232,240,1)", 2, 0.75));
+
+  const laneW = (LANE.x1 - LANE.x0);
+  const aw = Math.max(7, laneW*0.03);
+  const ah = Math.max(10, laneW*0.04);
+
+  ARROWS.forEach(b=>{
+    const y = yFromFeet(ARROW_Y_FEET[b] ?? 15);
+    const x = xFromBoard(b);
+    add(svg, arrowTri(x, y, aw, ah));
+  });
+
+  const yPinsLine = yFromFeet(FEET.pins);
+  add(svg, line(LANE.x0, yPinsLine, LANE.x1, yPinsLine, "rgba(226,232,240,1)", 2, 0.75));
+
+  // pocket guide (right pocket)
+  const xPocket = xFromBoard(POCKET_BOARD);
+  add(svg, line(xPocket, LANE.y0, xPocket, LANE.y1, "rgba(37,99,235,1)", 2, 0.14, "6 6"));
+  add(svg, text(xPocket, LANE.y0 + 18, "POCKET (1–3)", 11, "rgba(37,99,235,.75)", "middle", "800", 0.9));
+
+  for (const p of ALL_PINS){
+    const pos = pinPosition(p);
+    add(svg, circle(xFromBoard(pos.board), pos.y, PIN_LAYOUT.r, "rgba(255,255,255,1)", 1, "rgba(100,116,139,.55)", 1));
+  }
+
+  const last3 = shots.slice(-3);
+  last3.forEach((s, i)=>{
+    const o = [0.18, 0.35, 0.90][Math.max(0, last3.length-3+i)] ?? 0.6;
+    drawShot(svg, s, o, i === last3.length-1, false, null);
+  });
+
+  const standingBefore = pinsSetAsSet();
+  const rollIndex = (game.frames[game.curFrame]?.rolls?.length ?? 0);
+  const spareModeNow = !game.done && (standingBefore.size !== 10 || rollIndex > 0);
+  const nowImpact = spareModeNow ? spareImpactFromStandingPins(standingBefore, cur, "SPARE") : null;
+  drawShot(svg, cur, 0.35, false, true, nowImpact);
+
+  if (ui.showSparePreview){
+    const future = futureLeaveFromUi();
+    if (future.size > 0 && future.size < 10){
+      const impact = spareImpactFromStandingPins(future, cur, "NEXT");
+      if (impact){
+        drawGuideShot(svg, cur, impact, {
+          stroke: "rgba(124,58,237,.70)",
+          opacity: 0.45,
+          width: 3,
+          dash: "8 8",
+        });
+      }
+    }
+  }
+}
+
+function drawShot(svg, sRaw, op=0.8, isLast=false, isGhost=false, impactOverride=null){
+  const s = normalizeShot(sRaw);
+
+  const yFoul = yFromFeet(0);
+  const xStart = xFromBoard(s.lineup);
+
+  const yAim = yFromFeet(ARROW_Y_FEET[s.target] ?? 15);
+  const xAim = xFromBoard(s.target);
+
+  const impact = impactOverride || impactPointForShot(s);
+  const xEnd = xFromBoard(impact.board);
+  const yEnd = impact.y;
+
+  const bpFeet = breakpointFeetForShot(s);
+  const yBP = yFromFeet(bpFeet);
+  const bpBoard = breakpointBoardForShot(s, impact.board);
+  const xBP = xFromBoard(bpBoard);
+
+  const col = isGhost ? "rgba(15,23,42,.45)" : carryColor(s.carry);
+  const w = isGhost ? 3 : (isLast ? 6 : 4);
+
+  const c1x = xStart;
+  const c1y = yFromFeet(6);
+  const c2x = lerp(xStart, xAim, 0.55);
+  const c2y = yAim + 85;
+  const d1 = `M ${xStart} ${yFoul} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${xAim} ${yAim}`;
+
+  const c3x = xAim;
+  const c3y = yAim - 70;
+  const c4x = xBP;
+  const c4y = yBP;
+  const d2 = `M ${xAim} ${yAim} C ${c3x} ${c3y}, ${c4x} ${c4y}, ${xEnd} ${yEnd}`;
+
+  add(svg, path(`${d1} ${d2}`, col, w, op));
+  add(svg, circle(xAim, yAim, isLast ? 7 : 6, col, op, "rgba(15,23,42,.08)", 1));
+  add(svg, circle(xBP, yBP, 4, col, op));
+  add(svg, circle(xEnd, yEnd, 5, col, op));
+
+  if (isGhost){
+    drawImpactCrosshair(svg, impact, col, op, impact.label ? `${impact.label}` : "Preview", 0.45);
+  } else if (isLast){
+    drawImpactCrosshair(svg, impact, col, op, impact.label ? `Impact ${impact.label}` : "Impact", 0.85);
+  }
+}
+
+/* =========================
+   SCORE + PINS (unchanged)
+========================= */
+function cloneGame(g){ return JSON.parse(JSON.stringify(g)); }
+function pinsStanding(){ return (game.pinsSet || []).length; }
+function rackFull(){ return ALL_PINS.slice(); }
+
+function flattenRolls(frames){
+  const out = [];
+  for (let i=0;i<10;i++){
+    const r = frames[i].rolls || [];
+    for (const v of r) out.push(v);
+  }
+  return out;
+}
+function computeScore(frames){
+  const flat = flattenRolls(frames);
+  const frameTotals = Array(10).fill(null);
+  const running = Array(10).fill(null);
+  let rollIndex = 0;
+  let total = 0;
+
+  for (let f=0; f<10; f++){
+    const fr = frames[f].rolls || [];
+
+    if (f < 9){
+      const r1 = flat[rollIndex];
+      if (r1 == null) break;
+
+      if (r1 === 10){
+        const b1 = flat[rollIndex+1];
+        const b2 = flat[rollIndex+2];
+        if (b1 == null || b2 == null) break;
+        total += 10 + b1 + b2;
+        frameTotals[f] = 10 + b1 + b2;
+        running[f] = total;
+        rollIndex += 1;
+        continue;
+      }
+
+      const r2 = flat[rollIndex+1];
+      if (r2 == null) break;
+
+      if (r1 + r2 === 10){
+        const b1 = flat[rollIndex+2];
+        if (b1 == null) break;
+        total += 10 + b1;
+        frameTotals[f] = 10 + b1;
+        running[f] = total;
+        rollIndex += 2;
+        continue;
+      }
+
+      total += (r1 + r2);
+      frameTotals[f] = (r1 + r2);
+      running[f] = total;
+      rollIndex += 2;
+    } else {
+      if (!fr.length || fr.length < 2) break;
+      const sum = fr.reduce((a,b)=>a+b,0);
+      const needsThird = (fr[0] === 10) || (fr[0] + fr[1] === 10);
+      if (needsThird && fr.length < 3) break;
+      total += sum;
+      frameTotals[f] = sum;
+      running[f] = total;
+    }
+  }
+  return { frameTotals, running };
+}
+
+function formatRollForDisplay(frameIndex, rIdx, pins, frameRolls){
+  if (pins == null) return "";
+  if (frameIndex < 9){
+    if (rIdx === 0 && pins === 10) return "X";
+    if (rIdx === 1 && (frameRolls[0] ?? 0) + pins === 10) return "/";
+    if (pins === 0) return "-";
+    return String(pins);
+  }
+  const r1 = frameRolls[0];
+  if (rIdx === 0) return (pins === 10) ? "X" : (pins === 0 ? "-" : String(pins));
+  if (rIdx === 1){
+    if (r1 === 10) return (pins === 10) ? "X" : (pins === 0 ? "-" : String(pins));
+    if (r1 + pins === 10) return "/";
+    return (pins === 0 ? "-" : String(pins));
+  }
+  if (rIdx === 2) return (pins === 10) ? "X" : (pins === 0 ? "-" : String(pins));
+  return String(pins);
+}
+
+function renderScore(){
+  const tb = document.getElementById("scoreBody");
+  tb.innerHTML = "";
+  const s = computeScore(game.frames);
+
+  for (let i=0;i<10;i++){
+    const fr = game.frames[i].rolls || [];
+    const tr = document.createElement("tr");
+
+    const tdF = document.createElement("td"); tdF.textContent = String(i+1); tr.appendChild(tdF);
+
+    const td1 = document.createElement("td"); td1.className="mono"; td1.textContent = formatRollForDisplay(i,0, fr[0], fr); tr.appendChild(td1);
+    const td2 = document.createElement("td"); td2.className="mono"; td2.textContent = formatRollForDisplay(i,1, fr[1], fr); tr.appendChild(td2);
+    const td3 = document.createElement("td"); td3.className="mono"; td3.textContent = formatRollForDisplay(i,2, fr[2], fr); tr.appendChild(td3);
+
+    const tdFT = document.createElement("td"); tdFT.className="mono"; tdFT.textContent = (s.frameTotals[i] == null) ? "" : String(s.frameTotals[i]); tr.appendChild(tdFT);
+    const tdRun = document.createElement("td"); tdRun.className="mono"; tdRun.textContent = (s.running[i] == null) ? "" : String(s.running[i]); tr.appendChild(tdRun);
+
+    tb.appendChild(tr);
+  }
+
+  document.getElementById("curFrame").textContent = String(Math.min(game.curFrame+1, 10));
+  document.getElementById("curRoll").textContent = game.done ? "-" : String((game.frames[game.curFrame]?.rolls?.length ?? 0) + 1);
+  document.getElementById("pinsStanding").textContent = String(pinsStanding());
+}
+
+function snapshotForUndo(){
+  game.history.push(cloneGame({
+    frames: game.frames,
+    curFrame: game.curFrame,
+    done: game.done,
+    pinsSet: game.pinsSet
+  }));
+  game.history = game.history.slice(-40);
+}
+
+function applyRoll(pinsKnocked, leavePins){
+  if (game.done) throw new Error("Game is complete.");
+
+  const beforeSet = pinsSetAsSet();
+  const maxPins = beforeSet.size;
+
+  if (!Number.isFinite(pinsKnocked) || pinsKnocked < 0 || pinsKnocked > maxPins){
+    throw new Error(`Pins knocked must be 0–${maxPins}.`);
+  }
+  for (const p of leavePins){
+    if (!beforeSet.has(p)) throw new Error("Leave includes a pin that was already down.");
+  }
+
+  snapshotForUndo();
+
+  const f = game.curFrame;
+  const fr = game.frames[f].rolls;
+  fr.push(pinsKnocked);
+
+  game.pinsSet = Array.from(leavePins).sort((a,b)=>a-b);
+
+  if (f < 9){
+    if (pinsKnocked === 10){
+      game.curFrame += 1;
+      game.pinsSet = rackFull();
+    } else if (fr.length === 2){
+      game.curFrame += 1;
+      game.pinsSet = rackFull();
+    }
+    if (game.curFrame >= 10) game.done = true;
+    return;
+  }
+
+  if (fr.length === 1){
+    if (fr[0] === 10) game.pinsSet = rackFull();
+    return;
+  }
+  if (fr.length === 2){
+    const r1 = fr[0], r2 = fr[1];
+    const open = (r1 !== 10) && (r1 + r2 < 10);
+    if (open){ game.done = true; return; }
+
+    if (r1 === 10 && r2 === 10){ game.pinsSet = rackFull(); return; }
+    if (r1 !== 10 && (r1 + r2 === 10)){ game.pinsSet = rackFull(); return; }
+    return;
+  }
+  if (fr.length === 3) game.done = true;
+}
+
+/* =========================
+   PIN DECK UI
+========================= */
+function initPinGrid(){
+  const grid = document.getElementById("pinGrid");
+  grid.innerHTML = "";
+  for (const pin of ALL_PINS){
+    const btn = document.createElement("button");
+    btn.className = "pinBtn";
+    btn.textContent = String(pin);
+    btn.setAttribute("data-pin", String(pin));
+    const pos = PIN_UI_POS[pin];
+    btn.style.gridRow = String(pos.r);
+    btn.style.gridColumn = String(pos.c);
+    btn.onclick = () => toggleLeavePin(pin);
+    grid.appendChild(btn);
+  }
+}
+function currentStandingSet(){ return pinsSetAsSet(); }
+function resetUiLeaveToStanding(){
+  uiLeaveSet = new Set(Array.from(currentStandingSet()));
+  updatePinDeckUI();
+}
+function toggleLeavePin(pin){
+  const standing = currentStandingSet();
+  if (!standing.has(pin)) return;
+  if (uiLeaveSet.has(pin)) uiLeaveSet.delete(pin);
+  else uiLeaveSet.add(pin);
+  updatePinDeckUI();
+  draw();
+}
+function setLeavePreset(kind){
+  const standing = currentStandingSet();
+  if (kind === "resetToStanding"){ resetUiLeaveToStanding(); draw(); return; }
+  if (kind === "strike"){ uiLeaveSet = new Set(); updatePinDeckUI(); draw(); return; }
+  if (kind === "gutter"){ uiLeaveSet = new Set(Array.from(standing)); updatePinDeckUI(); draw(); return; }
+}
+function pinsKnockedFromUi(){
+  const standing = currentStandingSet();
+  let leftCount = 0;
+  for (const p of uiLeaveSet){
+    if (standing.has(p)) leftCount += 1;
+  }
+  return standing.size - leftCount;
+}
+function updatePinDeckUI(){
+  const standing = currentStandingSet();
+  for (const pin of ALL_PINS){
+    const btn = document.querySelector(`button[data-pin="${pin}"]`);
+    if (!btn) continue;
+    const isStandingBefore = standing.has(pin);
+    btn.classList.toggle("disabled", !isStandingBefore);
+    const isLeftAfter = uiLeaveSet.has(pin) && isStandingBefore;
+    btn.classList.toggle("on", isLeftAfter);
+  }
+  document.getElementById("pinsKnocked").textContent = String(pinsKnockedFromUi());
+}
+
+/* =========================
+   AI COACH (minimal)
+========================= */
+function leaveKeyFromPins(pinsLeft){ return Array.from(pinsLeft).sort((a,b)=>a-b).join("-"); }
+function classifyLeave(pinsLeft){
+  const s = new Set(pinsLeft);
+  if (s.size === 0) return { name: "Strike", type: "strike" };
+  if (s.size === 10) return { name: "Gutter (all standing)", type: "gutter" };
+  if (s.size === 1 && s.has(10)) return { name: "10 pin", type: "corner10" };
+  if (s.size === 1 && s.has(7)) return { name: "7 pin", type: "corner7" };
+  const k = leaveKeyFromPins(s);
+  if (!s.has(1) && s.size >= 3) return { name: "Washout / no headpin", type: "washout" };
+  return { name: `Leave: ${k || "?"}`, type: "other" };
+}
+function coachMessage({shot, pinsKnocked, pinsLeft, frameIndex, rollIndex}){
+  const pinsLeftSet = new Set(pinsLeft);
+  const leaveInfo = classifyLeave(pinsLeftSet);
+
+  let summary = "Tap pins + Record.";
+  if (pinsKnocked === 10) summary = "Strike — stay put and repeat.";
+  else if (leaveInfo.type === "corner10") summary = "10-pin: spare straight; if repeated, slightly less angle / a touch LEFT.";
+  else if (leaveInfo.type === "corner7") summary = "7-pin: spare straight; if repeated, 1 RIGHT or smoother hook.";
+  else if (shot.carry === "High" || shot.hook === "Early") summary = "High/Early: try 2&1 RIGHT (feet 2, target 1) or delay hook.";
+  else if (shot.carry === "Light" || shot.hook === "Late") summary = "Light/Late: try 2&1 LEFT (feet 2, target 1) or earlier read.";
+  else if (pinsKnocked >= 9) summary = "Good hit — small change only (½–1 board).";
+  else summary = "Pick ONE move and repeat it twice.";
+
+  const details = [
+    `Frame ${frameIndex+1}, Roll ${rollIndex+1}`,
+    `Lineup ${shot.lineup} → Target ${shot.target} • Hook ${shot.hook} • Carry ${shot.carry}`,
+    `Knocked ${pinsKnocked} • ${leaveInfo.name}`,
+    "",
+    "Next steps:",
+    `- ${summary}`
+  ];
+  return { summary, details: details.join("\n") };
+}
+function setCoach({summary, details}){
+  const el = document.getElementById("coachSummary");
+  el.innerHTML = `<div class="coachSmall"><b>Coach:</b> ${escapeHtml(summary)}</div>`;
+  document.getElementById("coachDetails").textContent = details || "—";
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+/* =========================
+   UI TOGGLES
+========================= */
+function toggleSparePreview(){
+  ui.showSparePreview = !ui.showSparePreview;
+  persistUi();
+  renderUiToggles();
+  draw();
+}
+function renderUiToggles(){
+  const el = document.getElementById("toggleSparePreview");
+  el.classList.toggle("on", !!ui.showSparePreview);
+}
+
+/* =========================
+   QUICK CONTROLS
+========================= */
+function setHook(h){ cur.hook = h; sync(); }
+function setCarry(c){ cur.carry = c; sync(); }
+function nudge(which, delta){
+  if (which === "lineup") cur.lineup = clamp(cur.lineup + delta, 1, 40);
+  if (which === "target") cur.target = clamp(cur.target + delta, 1, 40);
+  sync();
+}
+function updateSegments(){
+  const setOn = (id, on) => document.getElementById(id).classList.toggle("on", on);
+  setOn("hookEarly", cur.hook==="Early");
+  setOn("hookOnTime", cur.hook==="OnTime");
+  setOn("hookLate", cur.hook==="Late");
+  setOn("carryHigh", cur.carry==="High");
+  setOn("carryFlush", cur.carry==="Flush");
+  setOn("carryLight", cur.carry==="Light");
+
+  document.getElementById("vLineup").textContent = cur.lineup;
+  document.getElementById("vTarget").textContent = cur.target;
+  document.getElementById("vHook").textContent = cur.hook;
+  document.getElementById("vCarry").textContent = cur.carry;
+
+  document.getElementById("nLineup").textContent = cur.lineup;
+  document.getElementById("nTarget").textContent = cur.target;
+}
+
+/* =========================
+   ACTIONS
+========================= */
+function saveShotNoScore(){
+  shots.push(normalizeShot({ ...cur, ts: Date.now() }));
+  shots = shots.slice(-20000);
+  persistShots();
+  draw();
+}
+
+function recordRollAndSaveShot(){
+  try{
+    if (game.done) return alert("Game is complete. Start a new game.");
+
+    const beforeSet = currentStandingSet();
+    const leavePins = new Set();
+    for (const p of uiLeaveSet){
+      if (beforeSet.has(p)) leavePins.add(p);
+    }
+
+    const pinsKnocked = beforeSet.size - leavePins.size;
+    const frameIndex = game.curFrame;
+    const rollIndex = game.frames[frameIndex].rolls.length;
+
+    applyRoll(pinsKnocked, leavePins);
+    persistGame();
+
+    const shot = normalizeShot({
+      ...cur,
+      ts: Date.now(),
+      meta: {
+        frame: frameIndex + 1,
+        roll: rollIndex + 1,
+        pinsKnocked,
+        pinsLeft: Array.from(leavePins).sort((a,b)=>a-b),
+      }
+    });
+
+    shots.push(shot);
+    shots = shots.slice(-25000);
+    persistShots();
+
+    setCoach(coachMessage({
+      shot,
+      pinsKnocked,
+      pinsLeft: shot.meta.pinsLeft,
+      frameIndex,
+      rollIndex
+    }));
+
+    resetUiLeaveToStanding();
+    sync();
+  } catch (e){
+    alert(e?.message ?? String(e));
+  }
+}
+
+function undoShotOnly(){
+  if (!shots.length) return alert("No saved shots.");
+  shots.pop();
+  persistShots();
+  draw();
+}
+
+function clearAll(){
+  if (!confirm("Clear all saved shots and game?")) return;
+  shots = [];
+  persistShots();
+  game = newGameState();
+  persistGame();
+  setCoach({ summary: "Tap pins + Record.", details: "—" });
+  resetUiLeaveToStanding();
+  sync();
+}
+
+function newGame(){
+  if (!confirm("Start a new game (score resets)?")) return;
+  game = newGameState();
+  persistGame();
+  setCoach({ summary: "New game started.", details: "Tap pins left and press Record." });
+  resetUiLeaveToStanding();
+  sync();
+}
+
+function undoRoll(){
+  if (!game.history || !game.history.length) return alert("No rolls to undo.");
+  const prev = game.history.pop();
+  game.frames = prev.frames;
+  game.curFrame = prev.curFrame;
+  game.done = prev.done;
+  game.pinsSet = prev.pinsSet || rackFull();
+  persistGame();
+  resetUiLeaveToStanding();
+  sync();
+}
+
+/* =========================
+   SHORTCUTS
+========================= */
+function bindShortcuts(){
+  window.addEventListener("keydown", (e)=>{
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+    if (tag === "input" || tag === "textarea" || tag === "select") return;
+
+    if (e.key === "Enter"){ e.preventDefault(); recordRollAndSaveShot(); return; }
+    if (e.key === "ArrowLeft"){ e.preventDefault(); nudge("target",-1); return; }
+    if (e.key === "ArrowRight"){ e.preventDefault(); nudge("target",+1); return; }
+    if (e.key.toLowerCase() === "a"){ e.preventDefault(); nudge("lineup",-1); return; }
+    if (e.key.toLowerCase() === "d"){ e.preventDefault(); nudge("lineup",+1); return; }
+  });
+}
+
+/* =========================
+   INIT
+========================= */
+function sync(){
+  updateSegments();
+  draw();
+  renderScore();
+  updatePinDeckUI();
+  renderUiToggles();
+}
+
+function init(){
+  cur = normalizeShot(cur);
+  initPinGrid();
+
+  if (!Array.isArray(game.pinsSet) || !game.pinsSet.length) game.pinsSet = rackFull();
+  resetUiLeaveToStanding();
+
+  setCoach({ summary: "Tap pins + Record.", details: "Pocket is RIGHT (1–3). High=left, Light=right." });
+  bindShortcuts();
+  sync();
+}
+init();
+</script>
+</body>
+</html>
